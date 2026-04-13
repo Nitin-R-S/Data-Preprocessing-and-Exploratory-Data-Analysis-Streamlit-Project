@@ -5,7 +5,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder, StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
-from io import BytesIO
 from typing import List, Tuple
 
 st.set_page_config(
