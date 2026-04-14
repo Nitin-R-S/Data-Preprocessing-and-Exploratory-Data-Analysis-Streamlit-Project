@@ -5,7 +5,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder, StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
-from typing import List, Tuple
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.svm import SVC
+from sklearn.cluster import KMeans
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, mean_squared_error, r2_score
+from typing import List, Tuple, Dict, Any
 
 st.set_page_config(
     page_title="Automated EDA & Preprocessing",
@@ -240,6 +246,121 @@ def show_top_correlations(df: pd.DataFrame, top_n: int = 5) -> None:
     corr = numeric_df.corr().abs().unstack().sort_values(kind="quicksort", ascending=False)
     corr = corr[corr != 1].drop_duplicates().head(top_n)
     st.table(corr.reset_index().rename(columns={"level_0": "feature_a", "level_1": "feature_b", 0: "abs_correlation"}))
+
+
+def train_classification_model(df: pd.DataFrame, model_name: str, target_col: str, test_size: float = 0.2) -> Dict[str, Any]:
+    """Train a classification model and return metrics."""
+    try:
+        X = df.drop(columns=[target_col])
+        y = df[target_col]
+        
+        # Remove rows with missing values in target
+        valid_idx = ~y.isna()
+        X = X[valid_idx]
+        y = y[valid_idx]
+        
+        if len(X) == 0:
+            return {"error": "No valid data after removing missing values."}
+        
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+        
+        if model_name == "Logistic Regression":
+            model = LogisticRegression(max_iter=1000, random_state=42)
+        elif model_name == "Random Forest Classifier":
+            model = RandomForestClassifier(n_estimators=100, random_state=42)
+        elif model_name == "SVM":
+            model = SVC(kernel="rbf", random_state=42)
+        else:
+            return {"error": "Unknown model name."}
+        
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        
+        accuracy = accuracy_score(y_test, y_pred)
+        precision = precision_score(y_test, y_pred, average="weighted", zero_division=0)
+        recall = recall_score(y_test, y_pred, average="weighted", zero_division=0)
+        f1 = f1_score(y_test, y_pred, average="weighted", zero_division=0)
+        
+        return {
+            "model": model,
+            "accuracy": accuracy,
+            "precision": precision,
+            "recall": recall,
+            "f1_score": f1,
+            "train_size": len(X_train),
+            "test_size": len(X_test),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def train_regression_model(df: pd.DataFrame, model_name: str, target_col: str, test_size: float = 0.2) -> Dict[str, Any]:
+    """Train a regression model and return metrics."""
+    try:
+        X = df.drop(columns=[target_col])
+        y = df[target_col]
+        
+        # Remove rows with missing values
+        valid_idx = ~(X.isna().any(axis=1) | y.isna())
+        X = X[valid_idx]
+        y = y[valid_idx]
+        
+        if len(X) == 0:
+            return {"error": "No valid data after removing missing values."}
+        
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+        
+        if model_name == "Linear Regression":
+            model = LinearRegression()
+        elif model_name == "Random Forest Regressor":
+            model = RandomForestRegressor(n_estimators=100, random_state=42)
+        else:
+            return {"error": "Unknown model name."}
+        
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        
+        mse = mean_squared_error(y_test, y_pred)
+        rmse = np.sqrt(mse)
+        r2 = r2_score(y_test, y_pred)
+        
+        return {
+            "model": model,
+            "mse": mse,
+            "rmse": rmse,
+            "r2_score": r2,
+            "train_size": len(X_train),
+            "test_size": len(X_test),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def train_clustering_model(df: pd.DataFrame, n_clusters: int, numeric_cols: List[str]) -> Dict[str, Any]:
+    """Train a KMeans clustering model and return metrics."""
+    try:
+        X = df[numeric_cols].dropna()
+        
+        if len(X) == 0:
+            return {"error": "No valid data for clustering."}
+        
+        if len(X.columns) == 0:
+            return {"error": "No numeric columns selected."}
+        
+        model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+        clusters = model.fit_predict(X)
+        inertia = model.inertia_
+        silhouette_score = None
+        
+        return {
+            "model": model,
+            "clusters": clusters,
+            "inertia": inertia,
+            "n_samples": len(X),
+            "n_clusters": n_clusters,
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 
 def main():
@@ -515,6 +636,147 @@ def main():
         file_name="processed_dataset.csv",
         mime="text/csv",
     )
+
+    st.markdown("---")
+    st.header("Model Training")
+    
+    model_type = st.selectbox(
+        "Select Model Type",
+        options=["Classification", "Regression", "Clustering"],
+        index=0,
+    )
+    
+    if model_type == "Classification":
+        st.subheader("Classification Models")
+        st.write("Train a classification model to predict categorical targets.")
+        
+        numeric_cols = detect_numeric_columns(processed_df)
+        all_cols = processed_df.columns.tolist()
+        
+        target_col = st.selectbox(
+            "Select target column (must be numeric or encoded categorical)",
+            options=all_cols,
+            key="class_target",
+        )
+        
+        model_name = st.selectbox(
+            "Select Classification Model",
+            options=["Logistic Regression", "Random Forest Classifier", "SVM"],
+            key="class_model",
+        )
+        
+        test_size = st.slider("Test set size", min_value=0.1, max_value=0.5, value=0.2, step=0.05, key="class_test")
+        
+        if st.button("Train Classification Model"):
+            with st.spinner(f"Training {model_name}..."):
+                results = train_classification_model(processed_df, model_name, target_col, test_size)
+            
+            if "error" in results:
+                st.error(f"Error: {results['error']}")
+            else:
+                st.success(f"Model trained successfully!")
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("Accuracy", f"{results['accuracy']:.4f}")
+                col2.metric("Precision", f"{results['precision']:.4f}")
+                col3.metric("Recall", f"{results['recall']:.4f}")
+                col4.metric("F1-Score", f"{results['f1_score']:.4f}")
+                
+                st.write(f"**Training set size:** {results['train_size']}")
+                st.write(f"**Test set size:** {results['test_size']}")
+    
+    elif model_type == "Regression":
+        st.subheader("Regression Models")
+        st.write("Train a regression model to predict continuous targets.")
+        
+        numeric_cols = detect_numeric_columns(processed_df)
+        
+        if len(numeric_cols) < 2:
+            st.warning("At least 2 numeric columns are required for regression (features + target).")
+        else:
+            target_col = st.selectbox(
+                "Select target column (must be numeric)",
+                options=numeric_cols,
+                key="reg_target",
+            )
+            
+            model_name = st.selectbox(
+                "Select Regression Model",
+                options=["Linear Regression", "Random Forest Regressor"],
+                key="reg_model",
+            )
+            
+            test_size = st.slider("Test set size", min_value=0.1, max_value=0.5, value=0.2, step=0.05, key="reg_test")
+            
+            if st.button("Train Regression Model"):
+                with st.spinner(f"Training {model_name}..."):
+                    results = train_regression_model(processed_df, model_name, target_col, test_size)
+                
+                if "error" in results:
+                    st.error(f"Error: {results['error']}")
+                else:
+                    st.success(f"Model trained successfully!")
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("R² Score", f"{results['r2_score']:.4f}")
+                    col2.metric("RMSE", f"{results['rmse']:.4f}")
+                    col3.metric("MSE", f"{results['mse']:.4f}")
+                    
+                    st.write(f"**Training set size:** {results['train_size']}")
+                    st.write(f"**Test set size:** {results['test_size']}")
+    
+    elif model_type == "Clustering":
+        st.subheader("Clustering Models")
+        st.write("Train a KMeans clustering model to group similar data points.")
+        
+        numeric_cols = detect_numeric_columns(processed_df)
+        
+        if len(numeric_cols) == 0:
+            st.warning("No numeric columns available for clustering.")
+        else:
+            selected_cluster_cols = st.multiselect(
+                "Select numeric columns for clustering",
+                options=numeric_cols,
+                default=numeric_cols[:min(3, len(numeric_cols))],
+                key="cluster_cols",
+            )
+            
+            n_clusters = st.slider(
+                "Number of clusters",
+                min_value=2,
+                max_value=min(10, len(processed_df)),
+                value=3,
+                key="n_clusters",
+            )
+            
+            if st.button("Train Clustering Model"):
+                if not selected_cluster_cols:
+                    st.warning("Select at least one numeric column for clustering.")
+                else:
+                    with st.spinner("Training KMeans..."):
+                        results = train_clustering_model(processed_df, n_clusters, selected_cluster_cols)
+                    
+                    if "error" in results:
+                        st.error(f"Error: {results['error']}")
+                    else:
+                        st.success("KMeans clustering completed successfully!")
+                        col1, col2 = st.columns(2)
+                        col1.metric("Number of Clusters", results['n_clusters'])
+                        col2.metric("Inertia (WCSS)", f"{results['inertia']:.4f}")
+                        
+                        st.write(f"**Number of samples clustered:** {results['n_samples']}")
+                        
+                        # Visualize clusters if we have 2 or more dimensions
+                        if len(selected_cluster_cols) >= 2:
+                            st.subheader("Cluster Visualization")
+                            X_cluster = processed_df[selected_cluster_cols].dropna()
+                            clusters = results['clusters'][:len(X_cluster)]
+                            
+                            fig, ax = plt.subplots(figsize=(10, 6))
+                            scatter = ax.scatter(X_cluster.iloc[:, 0], X_cluster.iloc[:, 1], c=clusters, cmap="viridis", alpha=0.6)
+                            ax.set_xlabel(selected_cluster_cols[0])
+                            ax.set_ylabel(selected_cluster_cols[1])
+                            ax.set_title(f"KMeans Clustering (k={n_clusters})")
+                            plt.colorbar(scatter, ax=ax, label="Cluster")
+                            st.pyplot(fig)
 
     st.markdown("---")
     st.header("Pipeline Summary")
