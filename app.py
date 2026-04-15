@@ -248,21 +248,85 @@ def show_top_correlations(df: pd.DataFrame, top_n: int = 5) -> None:
     st.table(corr.reset_index().rename(columns={"level_0": "feature_a", "level_1": "feature_b", 0: "abs_correlation"}))
 
 
-def train_classification_model(df: pd.DataFrame, model_name: str, target_col: str, test_size: float = 0.2) -> Dict[str, Any]:
+def _prepare_model_data(
+    df: pd.DataFrame,
+    target_col: str,
+    feature_cols: List[str],
+    problem_type: str,
+) -> Tuple[pd.DataFrame, pd.Series, str]:
+    """Prepare model features and target for scikit-learn training."""
+    if target_col not in df.columns:
+        return pd.DataFrame(), pd.Series(dtype=float), f"Target column '{target_col}' was not found."
+
+    if not feature_cols:
+        return pd.DataFrame(), pd.Series(dtype=float), "Select at least one predictor column."
+
+    if target_col in feature_cols:
+        return pd.DataFrame(), pd.Series(dtype=float), "Target column cannot be used as a predictor."
+
+    data = df.copy()
+    y = data[target_col].dropna()
+
+    if y.empty:
+        return pd.DataFrame(), pd.Series(dtype=float), "Target column has no valid values after removing missing data."
+
+    missing_features = [col for col in feature_cols if col not in data.columns]
+    if missing_features:
+        return pd.DataFrame(), pd.Series(dtype=float), f"Predictor column(s) not found: {', '.join(missing_features)}."
+
+    X = data.loc[y.index, feature_cols].copy()
+    if X.empty:
+        return pd.DataFrame(), pd.Series(dtype=float), "No feature columns are available for training."
+
+    if problem_type == "regression" and not pd.api.types.is_numeric_dtype(y):
+        return pd.DataFrame(), pd.Series(dtype=float), "Regression target must be numeric."
+
+    numeric_cols = X.select_dtypes(include=["number", "bool"]).columns.tolist()
+    categorical_cols = [col for col in X.columns if col not in numeric_cols]
+
+    if numeric_cols:
+        X[numeric_cols] = X[numeric_cols].apply(lambda series: series.fillna(series.median()))
+    if categorical_cols:
+        for col in categorical_cols:
+            mode_value = X[col].mode(dropna=True)
+            if mode_value.empty:
+                X[col] = X[col].fillna("missing")
+            else:
+                X[col] = X[col].fillna(mode_value[0]).astype(str)
+
+    X = pd.get_dummies(X, columns=categorical_cols, drop_first=False)
+    X = X.replace([np.inf, -np.inf], np.nan).fillna(0)
+
+    return X, y, ""
+
+
+def train_classification_model(
+    df: pd.DataFrame,
+    model_name: str,
+    target_col: str,
+    feature_cols: List[str],
+    test_size: float = 0.2,
+) -> Dict[str, Any]:
     """Train a classification model and return metrics."""
     try:
-        X = df.drop(columns=[target_col])
-        y = df[target_col]
-        
-        # Remove rows with missing values in target
-        valid_idx = ~y.isna()
-        X = X[valid_idx]
-        y = y[valid_idx]
-        
-        if len(X) == 0:
-            return {"error": "No valid data after removing missing values."}
-        
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+        X, y, error = _prepare_model_data(df, target_col, feature_cols, "classification")
+        if error:
+            return {"error": error}
+
+        if y.nunique() < 2:
+            return {"error": "Classification target must contain at least two classes."}
+
+        stratify_target = y if y.value_counts().min() >= 2 else None
+        if len(X) < 2:
+            return {"error": "Not enough rows to train a classification model."}
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=test_size,
+            random_state=42,
+            stratify=stratify_target,
+        )
         
         if model_name == "Logistic Regression":
             model = LogisticRegression(max_iter=1000, random_state=42)
@@ -294,21 +358,28 @@ def train_classification_model(df: pd.DataFrame, model_name: str, target_col: st
         return {"error": str(e)}
 
 
-def train_regression_model(df: pd.DataFrame, model_name: str, target_col: str, test_size: float = 0.2) -> Dict[str, Any]:
+def train_regression_model(
+    df: pd.DataFrame,
+    model_name: str,
+    target_col: str,
+    feature_cols: List[str],
+    test_size: float = 0.2,
+) -> Dict[str, Any]:
     """Train a regression model and return metrics."""
     try:
-        X = df.drop(columns=[target_col])
-        y = df[target_col]
-        
-        # Remove rows with missing values
-        valid_idx = ~(X.isna().any(axis=1) | y.isna())
-        X = X[valid_idx]
-        y = y[valid_idx]
-        
-        if len(X) == 0:
-            return {"error": "No valid data after removing missing values."}
-        
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+        X, y, error = _prepare_model_data(df, target_col, feature_cols, "regression")
+        if error:
+            return {"error": error}
+
+        if len(X) < 2:
+            return {"error": "Not enough rows to train a regression model."}
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=test_size,
+            random_state=42,
+        )
         
         if model_name == "Linear Regression":
             model = LinearRegression()
@@ -339,18 +410,25 @@ def train_regression_model(df: pd.DataFrame, model_name: str, target_col: str, t
 def train_clustering_model(df: pd.DataFrame, n_clusters: int, numeric_cols: List[str]) -> Dict[str, Any]:
     """Train a KMeans clustering model and return metrics."""
     try:
-        X = df[numeric_cols].dropna()
-        
+        if not numeric_cols:
+            return {"error": "No numeric columns selected."}
+
+        X = df[numeric_cols].copy()
+        X = X.replace([np.inf, -np.inf], np.nan)
+        for col in X.columns:
+            X[col] = X[col].fillna(X[col].median())
+
+        X = X.dropna()
+
         if len(X) == 0:
             return {"error": "No valid data for clustering."}
         
-        if len(X.columns) == 0:
-            return {"error": "No numeric columns selected."}
+        if n_clusters > len(X):
+            return {"error": "Number of clusters cannot exceed the number of available samples."}
         
         model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
         clusters = model.fit_predict(X)
         inertia = model.inertia_
-        silhouette_score = None
         
         return {
             "model": model,
@@ -658,6 +736,15 @@ def main():
             options=all_cols,
             key="class_target",
         )
+
+        predictor_options = [col for col in all_cols if col != target_col]
+        feature_cols = st.multiselect(
+            "Select predictor columns",
+            options=predictor_options,
+            default=predictor_options,
+            key="class_features",
+            help="Choose the input columns used to predict the target column.",
+        )
         
         model_name = st.selectbox(
             "Select Classification Model",
@@ -669,7 +756,7 @@ def main():
         
         if st.button("Train Classification Model"):
             with st.spinner(f"Training {model_name}..."):
-                results = train_classification_model(processed_df, model_name, target_col, test_size)
+                results = train_classification_model(processed_df, model_name, target_col, feature_cols, test_size)
             
             if "error" in results:
                 st.error(f"Error: {results['error']}")
@@ -698,6 +785,15 @@ def main():
                 options=numeric_cols,
                 key="reg_target",
             )
+
+            predictor_options = [col for col in numeric_cols if col != target_col]
+            feature_cols = st.multiselect(
+                "Select predictor columns",
+                options=predictor_options,
+                default=predictor_options,
+                key="reg_features",
+                help="Choose the numeric input columns used to predict the target column.",
+            )
             
             model_name = st.selectbox(
                 "Select Regression Model",
@@ -709,7 +805,7 @@ def main():
             
             if st.button("Train Regression Model"):
                 with st.spinner(f"Training {model_name}..."):
-                    results = train_regression_model(processed_df, model_name, target_col, test_size)
+                    results = train_regression_model(processed_df, model_name, target_col, feature_cols, test_size)
                 
                 if "error" in results:
                     st.error(f"Error: {results['error']}")
