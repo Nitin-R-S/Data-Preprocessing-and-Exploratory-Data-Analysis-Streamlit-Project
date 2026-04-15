@@ -1,8 +1,8 @@
 # Data Preprocessing and Exploratory Data Analysis Streamlit Project
 
-An interactive Streamlit application for end-to-end dataset exploration and preprocessing.
+An interactive Streamlit application for end-to-end dataset exploration, preprocessing, and basic machine learning workflows.
 
-The app lets you upload a CSV dataset, inspect its structure, clean missing values, engineer features, encode categorical data, scale numeric columns, run PCA, visualize distributions/correlations, and export a processed CSV.
+The app lets you upload a CSV dataset, inspect its structure, clean missing values, engineer features, encode categorical data, scale numeric columns, run PCA, train baseline models, visualize patterns, and export a processed CSV.
 
 ## Features
 
@@ -21,6 +21,10 @@ The app lets you upload a CSV dataset, inspect its structure, clean missing valu
 	- Distribution plots (Histogram, KDE)
 	- Count plots
 	- Top correlated feature pairs
+- Modeling support:
+	- Classification (Logistic Regression, Random Forest, SVM)
+	- Regression (Linear Regression, Random Forest Regressor)
+	- Clustering (KMeans)
 - Numeric scaling:
 	- StandardScaler
 	- MinMaxScaler
@@ -32,31 +36,54 @@ The app lets you upload a CSV dataset, inspect its structure, clean missing valu
 ```text
 Data-Preprocessing-and-Exploratory-Data-Analysis-Streamlit-Project/
 ├── app.py
+├── requirements.txt
 └── README.md
 ```
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.10+
 - pip
-
-Python packages used:
-
-- streamlit
-- pandas
-- numpy
-- seaborn
-- matplotlib
-- scikit-learn
+- Dependencies listed in requirements.txt:
+	- streamlit==1.44.1
+	- pandas==2.2.3
+	- numpy==2.2.4
+	- seaborn==0.13.2
+	- matplotlib==3.10.1
+	- scikit-learn==1.6.1
 
 ## Installation
 
-1. Open a terminal in the project folder.
-2. (Optional) Create and activate a virtual environment.
-3. Install dependencies:
+1. Open a terminal and go to the project folder:
 
 ```bash
-pip install streamlit pandas numpy seaborn matplotlib scikit-learn
+cd Data-Preprocessing-and-Exploratory-Data-Analysis-Streamlit-Project
+```
+
+2. Create a virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+3. Activate the virtual environment:
+
+Windows (PowerShell):
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+macOS/Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+4. Install dependencies from requirements.txt:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## Run the App

@@ -1,3 +1,4 @@
+# Core dependencies for the Streamlit EDA and preprocessing app
 streamlit==1.44.1
 pandas==2.2.3
 numpy==2.2.4
