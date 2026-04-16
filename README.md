@@ -23,7 +23,7 @@ The app lets you upload a CSV dataset, inspect its structure, clean missing valu
 	- Top correlated feature pairs
 - Modeling support:
 	- Classification (Logistic Regression, Random Forest, SVM)
-	- Regression (Linear Regression, Random Forest Regressor)
+	- Regression (Linear Regression, Random Forest Regressor, SVR)
 	- Clustering (KMeans)
 - Numeric scaling:
 	- StandardScaler
