@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.svm import SVC
+from sklearn.svm import SVC, SVR
 from sklearn.cluster import KMeans
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, mean_squared_error, r2_score
 from typing import List, Tuple, Dict, Any
@@ -306,6 +306,9 @@ def train_classification_model(
     target_col: str,
     feature_cols: List[str],
     test_size: float = 0.2,
+    svm_kernel: str = "rbf",
+    svm_c: float = 1.0,
+    svm_gamma: str = "scale",
 ) -> Dict[str, Any]:
     """Train a classification model and return metrics."""
     try:
@@ -333,7 +336,7 @@ def train_classification_model(
         elif model_name == "Random Forest Classifier":
             model = RandomForestClassifier(n_estimators=100, random_state=42)
         elif model_name == "SVM":
-            model = SVC(kernel="rbf", random_state=42)
+            model = SVC(kernel=svm_kernel, C=svm_c, gamma=svm_gamma, random_state=42)
         else:
             return {"error": "Unknown model name."}
         
@@ -364,6 +367,10 @@ def train_regression_model(
     target_col: str,
     feature_cols: List[str],
     test_size: float = 0.2,
+    svm_kernel: str = "rbf",
+    svm_c: float = 1.0,
+    svm_gamma: str = "scale",
+    svm_epsilon: float = 0.1,
 ) -> Dict[str, Any]:
     """Train a regression model and return metrics."""
     try:
@@ -385,6 +392,8 @@ def train_regression_model(
             model = LinearRegression()
         elif model_name == "Random Forest Regressor":
             model = RandomForestRegressor(n_estimators=100, random_state=42)
+        elif model_name == "SVR":
+            model = SVR(kernel=svm_kernel, C=svm_c, gamma=svm_gamma, epsilon=svm_epsilon)
         else:
             return {"error": "Unknown model name."}
         
@@ -751,12 +760,47 @@ def main():
             options=["Logistic Regression", "Random Forest Classifier", "SVM"],
             key="class_model",
         )
+
+        class_svm_kernel = "rbf"
+        class_svm_c = 1.0
+        class_svm_gamma = "scale"
+        if model_name == "SVM":
+            st.write("SVM Hyperparameters")
+            class_svm_kernel = st.selectbox(
+                "SVM kernel",
+                options=["linear", "rbf", "poly", "sigmoid"],
+                index=1,
+                key="class_svm_kernel",
+            )
+            class_svm_c = st.slider(
+                "SVM C (regularization)",
+                min_value=0.1,
+                max_value=10.0,
+                value=1.0,
+                step=0.1,
+                key="class_svm_c",
+            )
+            class_svm_gamma = st.selectbox(
+                "SVM gamma",
+                options=["scale", "auto"],
+                index=0,
+                key="class_svm_gamma",
+            )
         
         test_size = st.slider("Test set size", min_value=0.1, max_value=0.5, value=0.2, step=0.05, key="class_test")
         
         if st.button("Train Classification Model"):
             with st.spinner(f"Training {model_name}..."):
-                results = train_classification_model(processed_df, model_name, target_col, feature_cols, test_size)
+                results = train_classification_model(
+                    processed_df,
+                    model_name,
+                    target_col,
+                    feature_cols,
+                    test_size,
+                    svm_kernel=class_svm_kernel,
+                    svm_c=class_svm_c,
+                    svm_gamma=class_svm_gamma,
+                )
             
             if "error" in results:
                 st.error(f"Error: {results['error']}")
@@ -797,15 +841,60 @@ def main():
             
             model_name = st.selectbox(
                 "Select Regression Model",
-                options=["Linear Regression", "Random Forest Regressor"],
+                options=["Linear Regression", "Random Forest Regressor", "SVR"],
                 key="reg_model",
             )
+
+            reg_svm_kernel = "rbf"
+            reg_svm_c = 1.0
+            reg_svm_gamma = "scale"
+            reg_svm_epsilon = 0.1
+            if model_name == "SVR":
+                st.write("SVR Hyperparameters")
+                reg_svm_kernel = st.selectbox(
+                    "SVR kernel",
+                    options=["linear", "rbf", "poly", "sigmoid"],
+                    index=1,
+                    key="reg_svm_kernel",
+                )
+                reg_svm_c = st.slider(
+                    "SVR C (regularization)",
+                    min_value=0.1,
+                    max_value=10.0,
+                    value=1.0,
+                    step=0.1,
+                    key="reg_svm_c",
+                )
+                reg_svm_gamma = st.selectbox(
+                    "SVR gamma",
+                    options=["scale", "auto"],
+                    index=0,
+                    key="reg_svm_gamma",
+                )
+                reg_svm_epsilon = st.slider(
+                    "SVR epsilon",
+                    min_value=0.01,
+                    max_value=1.0,
+                    value=0.1,
+                    step=0.01,
+                    key="reg_svm_epsilon",
+                )
             
             test_size = st.slider("Test set size", min_value=0.1, max_value=0.5, value=0.2, step=0.05, key="reg_test")
             
             if st.button("Train Regression Model"):
                 with st.spinner(f"Training {model_name}..."):
-                    results = train_regression_model(processed_df, model_name, target_col, feature_cols, test_size)
+                    results = train_regression_model(
+                        processed_df,
+                        model_name,
+                        target_col,
+                        feature_cols,
+                        test_size,
+                        svm_kernel=reg_svm_kernel,
+                        svm_c=reg_svm_c,
+                        svm_gamma=reg_svm_gamma,
+                        svm_epsilon=reg_svm_epsilon,
+                    )
                 
                 if "error" in results:
                     st.error(f"Error: {results['error']}")
