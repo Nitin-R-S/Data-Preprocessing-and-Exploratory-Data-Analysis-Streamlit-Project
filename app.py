@@ -1091,6 +1091,7 @@ def train_regression_model(
             "feature_names": X.columns.tolist(),
             "y_test": y_test.reset_index(drop=True),
             "y_pred": pd.Series(y_pred),
+            "X_test_vals": X_test.iloc[:, 0].values.tolist() if len(X.columns) == 1 else [],
         }
     except Exception as e:
         return {"error": str(e)}
@@ -1235,15 +1236,52 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
     viz_tab1, viz_tab2, viz_tab3 = st.tabs(["Actual vs Predicted", "Residuals", "Feature Influence"])
 
     with viz_tab1:
-        fig, ax = plt.subplots(figsize=(7, 5))
-        sns.scatterplot(x=y_test, y=y_pred, alpha=0.7, ax=ax)
-        min_val = float(min(y_test.min(), y_pred.min()))
-        max_val = float(max(y_test.max(), y_pred.max()))
-        ax.plot([min_val, max_val], [min_val, max_val], color="red", linestyle="--", linewidth=1.5)
-        ax.set_xlabel("Actual Values")
-        ax.set_ylabel("Predicted Values")
-        ax.set_title("Actual vs Predicted")
-        render_figure(fig)
+        if len(feature_names) == 1 and hasattr(model, "predict"):
+            fig, ax = plt.subplots(figsize=(7, 5))
+            
+            # Scatter plot of actual vs features
+            X_test_vals = results.get("X_test_vals", [])
+            if len(X_test_vals) == len(y_test) and len(X_test_vals) > 0:
+                ax.scatter(X_test_vals, y_test, color="blue", alpha=0.6, label="Actual Data")
+                
+                # Create line
+                x_min, x_max = min(X_test_vals), max(X_test_vals)
+                x_range = np.linspace(x_min, x_max, 100).reshape(-1, 1)
+                
+                # Check if model requires DataFrame
+                if hasattr(model, "feature_names_in_"):
+                    x_range_df = pd.DataFrame(x_range, columns=feature_names)
+                    y_range_pred = model.predict(x_range_df)
+                else:
+                    y_range_pred = model.predict(x_range)
+                
+                ax.plot(x_range, y_range_pred, color="red", linewidth=2, label="Model Prediction")
+                ax.set_xlabel(feature_names[0])
+                ax.set_ylabel("Target")
+                ax.set_title("1D Regression Model Diagram")
+                ax.legend()
+                render_figure(fig)
+                st.info("Displayed 1D Regression curve for single-feature dataset.")
+            else:
+                # Fallback
+                sns.scatterplot(x=y_test, y=y_pred, alpha=0.7, ax=ax)
+                min_val = float(min(y_test.min(), y_pred.min()))
+                max_val = float(max(y_test.max(), y_pred.max()))
+                ax.plot([min_val, max_val], [min_val, max_val], color="red", linestyle="--", linewidth=1.5)
+                ax.set_xlabel("Actual Values")
+                ax.set_ylabel("Predicted Values")
+                ax.set_title("Actual vs Predicted")
+                render_figure(fig)
+        else:
+            fig, ax = plt.subplots(figsize=(7, 5))
+            sns.scatterplot(x=y_test, y=y_pred, alpha=0.7, ax=ax)
+            min_val = float(min(y_test.min(), y_pred.min()))
+            max_val = float(max(y_test.max(), y_pred.max()))
+            ax.plot([min_val, max_val], [min_val, max_val], color="red", linestyle="--", linewidth=1.5)
+            ax.set_xlabel("Actual Values")
+            ax.set_ylabel("Predicted Values")
+            ax.set_title("Actual vs Predicted")
+            render_figure(fig)
 
     with viz_tab2:
         residuals = y_test - y_pred
