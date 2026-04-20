@@ -10,7 +10,7 @@ from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.svm import SVC, SVR
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
-from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor, plot_tree
 from sklearn.cluster import KMeans
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, mean_squared_error, r2_score, confusion_matrix
 from typing import List, Tuple, Dict, Any
@@ -1014,7 +1014,6 @@ def train_regression_model(
             model = LinearRegression(
                 fit_intercept=model_params.get("fit_intercept", True),
                 copy_X=model_params.get("copy_X", True),
-                tol=model_params.get("tol", 1e-6),
                 n_jobs=model_params.get("n_jobs", None),
                 positive=model_params.get("positive", False),
             )
@@ -1149,8 +1148,10 @@ def train_clustering_model(
 
 
 def plot_classification_visualizations(results: Dict[str, Any], model_name: str) -> None:
-    y_test = pd.Series(results.get("y_test", pd.Series(dtype=str))).astype(str)
-    y_pred = pd.Series(results.get("y_pred", pd.Series(dtype=str))).astype(str)
+    y_test_raw = results.get("y_test", [])
+    y_pred_raw = results.get("y_pred", [])
+    y_test = pd.Series(np.array(y_test_raw).ravel()).astype(str)
+    y_pred = pd.Series(np.array(y_pred_raw).ravel()).astype(str)
     feature_names = results.get("feature_names", [])
     model = results.get("model")
 
@@ -1188,10 +1189,15 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
         render_figure(fig)
 
     with viz_tab3:
-        if hasattr(model, "feature_importances_"):
+        if isinstance(model, DecisionTreeClassifier):
+            fig, ax = plt.subplots(figsize=(12, 8))
+            plot_tree(model, feature_names=feature_names, class_names=True, filled=True, ax=ax, max_depth=3)
+            ax.set_title("Decision Tree Plot (max depth 3)")
+            render_figure(fig)
+        elif hasattr(model, "feature_importances_"):
             importance = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False).head(15)
             fig, ax = plt.subplots(figsize=(8, 5))
-            sns.barplot(x=importance.values, y=importance.index, orient="h", palette="viridis", ax=ax)
+            sns.barplot(x=importance.values, y=importance.index, orient="h", hue=importance.index, legend=False, palette="viridis", ax=ax)
             ax.set_title("Top Feature Importances")
             ax.set_xlabel("Importance")
             ax.set_ylabel("Feature")
@@ -1203,7 +1209,7 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
             coef_series = pd.Series(np.asarray(coef_values).flatten(), index=feature_names)
             coef_series = coef_series.sort_values(key=np.abs, ascending=False).head(15)
             fig, ax = plt.subplots(figsize=(8, 5))
-            sns.barplot(x=coef_series.values, y=coef_series.index, orient="h", palette="magma", ax=ax)
+            sns.barplot(x=coef_series.values, y=coef_series.index, orient="h", hue=coef_series.index, legend=False, palette="magma", ax=ax)
             ax.set_title("Top Coefficients")
             ax.set_xlabel("Coefficient Value")
             ax.set_ylabel("Feature")
@@ -1213,8 +1219,10 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
 
 
 def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> None:
-    y_test = pd.Series(results.get("y_test", pd.Series(dtype=float))).astype(float)
-    y_pred = pd.Series(results.get("y_pred", pd.Series(dtype=float))).astype(float)
+    y_test_raw = results.get("y_test", [])
+    y_pred_raw = results.get("y_pred", [])
+    y_test = pd.Series(np.array(y_test_raw).ravel()).astype(float)
+    y_pred = pd.Series(np.array(y_pred_raw).ravel()).astype(float)
     feature_names = results.get("feature_names", [])
     model = results.get("model")
 
@@ -1255,10 +1263,15 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
         render_figure(fig2)
 
     with viz_tab3:
-        if hasattr(model, "feature_importances_"):
+        if isinstance(model, DecisionTreeRegressor):
+            fig, ax = plt.subplots(figsize=(12, 8))
+            plot_tree(model, feature_names=feature_names, filled=True, ax=ax, max_depth=3)
+            ax.set_title("Decision Tree Plot (max depth 3)")
+            render_figure(fig)
+        elif hasattr(model, "feature_importances_"):
             importance = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False).head(15)
             fig, ax = plt.subplots(figsize=(8, 5))
-            sns.barplot(x=importance.values, y=importance.index, orient="h", palette="viridis", ax=ax)
+            sns.barplot(x=importance.values, y=importance.index, orient="h", hue=importance.index, legend=False, palette="viridis", ax=ax)
             ax.set_title("Top Feature Importances")
             ax.set_xlabel("Importance")
             ax.set_ylabel("Feature")
@@ -1267,7 +1280,7 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
             coef_series = pd.Series(np.asarray(model.coef_).flatten(), index=feature_names)
             coef_series = coef_series.sort_values(key=np.abs, ascending=False).head(15)
             fig, ax = plt.subplots(figsize=(8, 5))
-            sns.barplot(x=coef_series.values, y=coef_series.index, orient="h", palette="magma", ax=ax)
+            sns.barplot(x=coef_series.values, y=coef_series.index, orient="h", hue=coef_series.index, legend=False, palette="magma", ax=ax)
             ax.set_title("Top Coefficients")
             ax.set_xlabel("Coefficient Value")
             ax.set_ylabel("Feature")
@@ -1310,7 +1323,7 @@ def plot_clustering_visualizations(results: Dict[str, Any], selected_cols: List[
     with viz_tab2:
         counts = pd.Series(clusters).value_counts().sort_index()
         fig, ax = plt.subplots(figsize=(8, 4))
-        sns.barplot(x=counts.index.astype(str), y=counts.values, palette="Set2", ax=ax)
+        sns.barplot(x=counts.index.astype(str), y=counts.values, hue=counts.index.astype(str), legend=False, palette="Set2", ax=ax)
         ax.set_title("Samples per Cluster")
         ax.set_xlabel("Cluster")
         ax.set_ylabel("Count")
@@ -1907,7 +1920,6 @@ def main():
             if model_name == "Linear Regression":
                 model_params["fit_intercept"] = st.checkbox("fit_intercept", value=True, key="reg_lr_fit_intercept")
                 model_params["copy_X"] = st.checkbox("copy_X", value=True, key="reg_lr_copy_x")
-                model_params["tol"] = st.number_input("tol", min_value=0.0, max_value=1.0, value=0.000001, step=0.000001, format="%.6f", key="reg_lr_tol")
                 reg_lr_n_jobs = st.number_input("n_jobs (0 = None)", min_value=0, max_value=64, value=0, step=1, key="reg_lr_n_jobs")
                 model_params["n_jobs"] = None if reg_lr_n_jobs == 0 else int(reg_lr_n_jobs)
                 model_params["positive"] = st.checkbox("positive", value=False, key="reg_lr_positive")
