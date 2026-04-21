@@ -34,11 +34,32 @@ def apply_ui_theme() -> None:
             --text-main: #1f2a22;
             --text-muted: #5c6a60;
             --brand: #245f45;
+            --brand-strong: #143b2a;
             --brand-soft: #d9f0e4;
             --accent: #d9683f;
+            --accent-soft: #ffeadf;
             --line: #dde6df;
+            --shadow-soft: 0 10px 24px rgba(22, 44, 32, 0.1);
+            --shadow-card: 0 16px 36px rgba(22, 44, 32, 0.12);
             --font-body: "Aptos", "Segoe UI Variable", "Segoe UI", "Trebuchet MS", sans-serif;
             --font-display: "Bahnschrift", "Franklin Gothic Medium", "Segoe UI Semibold", "Arial Narrow", sans-serif;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes glowShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         .stApp {
@@ -48,6 +69,7 @@ def apply_ui_theme() -> None:
                 var(--bg-main);
             color: var(--text-main);
             font-family: var(--font-body);
+            animation: fadeUp 0.45s ease-out;
         }
 
         .stApp,
@@ -110,6 +132,12 @@ def apply_ui_theme() -> None:
             overflow-x: hidden;
         }
 
+        section[data-testid="stSidebar"] .block-container {
+            padding-top: 1rem;
+            padding-left: 0.95rem;
+            padding-right: 0.95rem;
+        }
+
         section[data-testid="stSidebar"] p,
         section[data-testid="stSidebar"] label,
         section[data-testid="stSidebar"] h1,
@@ -127,6 +155,7 @@ def apply_ui_theme() -> None:
             border: 1px dashed rgba(236, 244, 239, 0.55);
             border-radius: 12px;
             background-color: rgba(255, 255, 255, 0.03);
+            padding: 0.3rem;
         }
 
         section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
@@ -150,6 +179,67 @@ def apply_ui_theme() -> None:
             border-color: rgba(236, 244, 239, 0.8) !important;
         }
 
+        section[data-testid="stSidebar"] .stFileUploader small {
+            color: #cce0d3 !important;
+        }
+
+        .sidebar-label {
+            margin: 0.25rem 0 0.45rem;
+            color: #eff7f2;
+            font-family: var(--font-display);
+            font-size: 1.05rem;
+            letter-spacing: 0.01em;
+        }
+
+        .sidebar-nav-wrap {
+            margin-top: 0.4rem;
+            border: 1px solid rgba(223, 239, 229, 0.22);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
+            border-radius: 14px;
+            padding: 0.65rem;
+        }
+
+        .sidebar-nav-title {
+            margin: 0.05rem 0 0.45rem;
+            color: #f5fbf7;
+            font-family: var(--font-display);
+            font-size: 1rem;
+            letter-spacing: 0.01em;
+        }
+
+        .sidebar-nav-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.3rem;
+        }
+
+        .sidebar-nav-link {
+            display: block;
+            color: #e4f2e9 !important;
+            text-decoration: none !important;
+            border: 1px solid rgba(223, 239, 229, 0.18);
+            border-radius: 10px;
+            padding: 0.36rem 0.55rem;
+            font-size: 0.9rem;
+            line-height: 1.25;
+            background: rgba(255, 255, 255, 0.03);
+            transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+
+        .sidebar-nav-link:hover {
+            background: rgba(217, 240, 228, 0.16);
+            border-color: rgba(223, 239, 229, 0.45);
+            transform: translateX(2px);
+        }
+
+        .sidebar-nav-link::before {
+            content: "#";
+            display: inline-block;
+            color: #9dd5b8;
+            margin-right: 0.36rem;
+            font-weight: 700;
+        }
+
         section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzoneInstructions"] {
             color: #d6e6db !important;
             overflow-wrap: anywhere;
@@ -163,13 +253,27 @@ def apply_ui_theme() -> None:
         }
 
         .hero-shell {
-            background: linear-gradient(135deg, #245f45 0%, #143b2a 48%, #0f291e 100%);
+            background: linear-gradient(130deg, #245f45 0%, #143b2a 45%, #0f291e 100%);
+            background-size: 200% 200%;
             color: #f2f8f4;
-            border-radius: 18px;
-            padding: 1.25rem 1.5rem;
-            margin-bottom: 1rem;
+            border-radius: 20px;
+            padding: 1.35rem 1.6rem;
+            margin-bottom: 1.1rem;
             border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 14px 35px rgba(24, 44, 33, 0.25);
+            box-shadow: 0 18px 40px rgba(24, 44, 33, 0.3);
+            position: relative;
+            overflow: hidden;
+            animation: glowShift 14s ease-in-out infinite;
+        }
+
+        .hero-shell::after {
+            content: "";
+            position: absolute;
+            inset: auto -20% -70% 45%;
+            width: 320px;
+            height: 320px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
+            pointer-events: none;
         }
 
         .hero-title {
@@ -187,13 +291,35 @@ def apply_ui_theme() -> None:
             font-size: 0.95rem;
         }
 
+        .hero-meta {
+            margin-top: 0.8rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-chip {
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #f3fbf6;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            padding: 0.22rem 0.7rem;
+            font-size: 0.74rem;
+            letter-spacing: 0.02em;
+            backdrop-filter: blur(2px);
+        }
+
         .section-title-wrap {
             margin-top: 0.3rem;
             margin-bottom: 0.7rem;
             background: var(--surface);
             border: 1px solid var(--line);
             border-radius: 14px;
-            padding: 0.75rem 0.9rem;
+            padding: 0.8rem 0.95rem;
+            box-shadow: var(--shadow-soft);
+            border-left: 5px solid var(--accent);
         }
 
         .section-kicker {
@@ -215,20 +341,41 @@ def apply_ui_theme() -> None:
             border: 1px solid var(--line);
             border-radius: 12px;
             overflow: hidden;
+            background: var(--surface);
+            box-shadow: var(--shadow-soft);
+        }
+
+        div[data-testid="stMetric"] {
+            background: linear-gradient(180deg, #ffffff 0%, #f5faf7 100%);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 0.45rem 0.65rem;
+            box-shadow: var(--shadow-soft);
         }
 
         div[data-testid="stMetricValue"] {
             font-family: var(--font-display);
             color: #1e5038;
+            letter-spacing: -0.02em;
+        }
+
+        div[data-testid="stMetricLabel"] {
+            color: var(--text-muted);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            font-size: 0.72rem;
         }
 
         .stButton > button,
         .stDownloadButton > button {
-            border-radius: 10px;
+            border-radius: 12px;
             border: 1px solid #1e5038;
-            background: linear-gradient(180deg, #286a4d 0%, #1e5038 100%);
+            background: linear-gradient(180deg, #2d7656 0%, #1b4d37 100%);
             color: #f4fbf7;
             font-weight: 600;
+            box-shadow: 0 8px 18px rgba(30, 80, 56, 0.2);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
 
         .stButton > button:hover,
@@ -236,6 +383,49 @@ def apply_ui_theme() -> None:
             border-color: #153a29;
             background: linear-gradient(180deg, #1f5a40 0%, #174632 100%);
             color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(30, 80, 56, 0.25);
+        }
+
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 0.4rem;
+            background: #eef3ef;
+            border-radius: 12px;
+            padding: 0.25rem;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            border-radius: 10px;
+            font-weight: 600;
+            color: #355243;
+            padding: 0.45rem 0.85rem;
+        }
+
+        .stTabs [aria-selected="true"] {
+            background: #ffffff;
+            color: var(--brand-strong);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        div[data-testid="stExpander"] {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--surface-soft);
+        }
+
+        div[data-testid="stVerticalBlock"] div[data-testid="stTextInput"] input,
+        div[data-testid="stVerticalBlock"] div[data-testid="stNumberInput"] input,
+        div[data-testid="stVerticalBlock"] div[data-testid="stSelectbox"] > div,
+        div[data-testid="stVerticalBlock"] div[data-testid="stMultiSelect"] > div,
+        div[data-testid="stVerticalBlock"] div[data-testid="stTextArea"] textarea {
+            border-radius: 10px;
+            border-color: #cedbd1;
+        }
+
+        div[data-testid="stVerticalBlock"] input:focus,
+        div[data-testid="stVerticalBlock"] textarea:focus {
+            border-color: #2c6c4f !important;
+            box-shadow: 0 0 0 2px rgba(44, 108, 79, 0.15);
         }
 
         @media (max-width: 900px) {
@@ -248,6 +438,14 @@ def apply_ui_theme() -> None:
             .hero-shell {
                 padding: 1rem;
                 border-radius: 14px;
+            }
+
+            .hero-meta {
+                gap: 0.35rem;
+            }
+
+            .hero-chip {
+                font-size: 0.69rem;
             }
         }
         </style>
@@ -530,10 +728,21 @@ def scale_data(df: pd.DataFrame, method: str, num_cols: List[str]) -> pd.DataFra
     return df
 
 
-def apply_pca(df: pd.DataFrame, n_components: int) -> Tuple[pd.DataFrame, np.ndarray, str]:
-    numeric_df = df.select_dtypes(include=["number"]).dropna()
+def apply_pca(df: pd.DataFrame, n_components: int, selected_cols: List[str]) -> Tuple[pd.DataFrame, np.ndarray, str]:
+    if not selected_cols:
+        return pd.DataFrame(), np.array([]), "Select at least one numeric column for PCA."
+
+    missing_cols = [col for col in selected_cols if col not in df.columns]
+    if missing_cols:
+        return pd.DataFrame(), np.array([]), f"Selected PCA columns not found: {', '.join(missing_cols)}"
+
+    non_numeric_cols = [col for col in selected_cols if not pd.api.types.is_numeric_dtype(df[col])]
+    if non_numeric_cols:
+        return pd.DataFrame(), np.array([]), f"PCA columns must be numeric: {', '.join(non_numeric_cols)}"
+
+    numeric_df = df[selected_cols].dropna()
     if numeric_df.empty:
-        return pd.DataFrame(), np.array([]), "PCA requires at least one row with numeric values."
+        return pd.DataFrame(), np.array([]), "PCA requires rows without missing values in selected columns."
 
     max_components = min(numeric_df.shape[0], numeric_df.shape[1])
     if max_components < 1:
@@ -565,6 +774,51 @@ def show_top_correlations(df: pd.DataFrame, top_n: int = 5) -> None:
     corr = numeric_df.corr().abs().unstack().sort_values(kind="quicksort", ascending=False)
     corr = corr[corr != 1].drop_duplicates().head(top_n)
     st.table(corr.reset_index().rename(columns={"level_0": "feature_a", "level_1": "feature_b", 0: "abs_correlation"}))
+
+
+def summarize_outliers_iqr(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
+    numeric_cols = detect_numeric_columns(df)
+    if not numeric_cols:
+        return pd.DataFrame(), pd.Series([False] * len(df), index=df.index)
+
+    summary_rows = []
+    row_outlier_mask = pd.Series([False] * len(df), index=df.index)
+
+    for col in numeric_cols:
+        series = df[col]
+        non_null = series.dropna()
+        if len(non_null) < 4:
+            continue
+
+        q1 = non_null.quantile(0.25)
+        q3 = non_null.quantile(0.75)
+        iqr = q3 - q1
+        if iqr == 0:
+            continue
+
+        lower = q1 - 1.5 * iqr
+        upper = q3 + 1.5 * iqr
+        col_mask = (series < lower) | (series > upper)
+        count = int(col_mask.sum())
+        if count == 0:
+            continue
+
+        row_outlier_mask = row_outlier_mask | col_mask.fillna(False)
+        summary_rows.append(
+            {
+                "column": col,
+                "lower_bound": float(lower),
+                "upper_bound": float(upper),
+                "outlier_count": count,
+                "outlier_percent": round((count / len(df) * 100), 2) if len(df) else 0.0,
+            }
+        )
+
+    if not summary_rows:
+        return pd.DataFrame(), row_outlier_mask
+
+    summary_df = pd.DataFrame(summary_rows).sort_values(by="outlier_count", ascending=False).reset_index(drop=True)
+    return summary_df, row_outlier_mask
 
 
 def build_column_profile(df: pd.DataFrame, date_cols: List[str]) -> pd.DataFrame:
@@ -859,6 +1113,46 @@ def _prepare_model_data(
     return X, y, ""
 
 
+def _prepare_classification_target(y: pd.Series) -> Tuple[pd.Series, str]:
+    """Ensure classification target is discrete and compatible with sklearn classifiers."""
+    y = y.dropna()
+    if y.empty:
+        return pd.Series(dtype=float), "Target column has no valid values after removing missing data."
+
+    unique_count = int(y.nunique(dropna=True))
+    if unique_count < 2:
+        return pd.Series(dtype=float), "Classification target must contain at least two classes."
+
+    # If the target looks highly unique relative to rows, it is likely continuous.
+    unique_ratio = unique_count / len(y) if len(y) else 1.0
+    if unique_count > 30 and unique_ratio > 0.2:
+        return (
+            pd.Series(dtype=float),
+            "Selected target appears continuous for classification. Choose a categorical/discrete target or use Regression.",
+        )
+
+    if pd.api.types.is_numeric_dtype(y):
+        y_numeric = pd.to_numeric(y, errors="coerce")
+        if y_numeric.isna().any():
+            return pd.Series(dtype=float), "Target contains invalid numeric values."
+
+        # Integer-like numeric targets are common class labels (0/1, 1/2/3, etc.).
+        if np.all(np.isclose(y_numeric, np.round(y_numeric), atol=1e-9)):
+            return pd.Series(np.round(y_numeric).astype(int), index=y.index), ""
+
+        # Non-integer numeric values can still represent classes if low-cardinality.
+        if unique_count <= 20:
+            return y.astype(str), ""
+
+        return (
+            pd.Series(dtype=float),
+            "Selected target appears continuous for classification. Choose a categorical/discrete target or use Regression.",
+        )
+
+    # Treat non-numeric labels as categorical classes.
+    return y.astype(str), ""
+
+
 def train_classification_model(
     df: pd.DataFrame,
     model_name: str,
@@ -873,6 +1167,10 @@ def train_classification_model(
         X, y, error = _prepare_model_data(df, target_col, feature_cols, "classification")
         if error:
             return {"error": error}
+
+        y, target_error = _prepare_classification_target(y)
+        if target_error:
+            return {"error": target_error}
 
         if y.nunique() < 2:
             return {"error": "Classification target must contain at least two classes."}
@@ -1167,7 +1465,7 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
 
     st.subheader(f"Automatic Visualizations: {model_name}")
 
-    tabs_list = ["Confusion Matrix", "Predicted vs Actual", "Feature Influence"]
+    tabs_list = ["Confusion Matrix", "Feature Influence"]
     if isinstance(model, (DecisionTreeClassifier, RandomForestClassifier)):
         tabs_list.append("Decision Tree Diagram")
     elif isinstance(model, (KNeighborsClassifier, SVC)):
@@ -1186,21 +1484,6 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
         render_figure(fig)
 
     with tabs[1]:
-        compare_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
-        actual_counts = compare_df["Actual"].value_counts().rename("Actual")
-        pred_counts = compare_df["Predicted"].value_counts().rename("Predicted")
-        dist_df = pd.concat([actual_counts, pred_counts], axis=1).fillna(0).astype(int)
-        dist_df = dist_df.reset_index().rename(columns={"index": "Class"})
-        melt_df = dist_df.melt(id_vars="Class", value_vars=["Actual", "Predicted"], var_name="Type", value_name="Count")
-
-        fig, ax = plt.subplots(figsize=(8, 5))
-        sns.barplot(data=melt_df, x="Class", y="Count", hue="Type", palette="Set2", ax=ax)
-        ax.set_title("Class Distribution: Actual vs Predicted")
-        ax.set_xlabel("Class")
-        ax.set_ylabel("Count")
-        render_figure(fig)
-
-    with tabs[2]:
         if hasattr(model, "feature_importances_"):
             importance = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False).head(15)
             fig, ax = plt.subplots(figsize=(8, 5))
@@ -1225,7 +1508,7 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
             st.info("This model does not expose feature influence directly.")
 
     if isinstance(model, (DecisionTreeClassifier, RandomForestClassifier)):
-        with tabs[3]:
+        with tabs[2]:
             fig, ax = plt.subplots(figsize=(12, 8))
             tree_to_plot = model.estimators_[0] if isinstance(model, RandomForestClassifier) else model
             plot_tree(tree_to_plot, feature_names=feature_names, class_names=True, filled=True, ax=ax, max_depth=3)
@@ -1233,7 +1516,7 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
             ax.set_title(title)
             render_figure(fig)
     elif isinstance(model, (KNeighborsClassifier, SVC)):
-        with tabs[3]:
+        with tabs[2]:
             try:
                 X_train_df = results.get("X_train_df")
                 y_train_series = results.get("y_train_series")
@@ -1241,6 +1524,7 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
                 if X_train_df is not None and y_train_series is not None:
                     X_train = getattr(X_train_df, "values", X_train_df)
                     y_train = getattr(y_train_series, "values", y_train_series)
+                    y_train_codes, _ = pd.factorize(pd.Series(y_train).astype(str))
                     
                     if X_train.shape[1] > 2:
                         pca = PCA(n_components=2)
@@ -1258,7 +1542,7 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
                         
                     fig, ax = plt.subplots(figsize=(8, 6))
                     DecisionBoundaryDisplay.from_estimator(vis_model, X_vis, response_method="predict", alpha=0.4, ax=ax, cmap="coolwarm")
-                    scatter = ax.scatter(X_vis[:, 0], X_vis[:, 1], c=y_train, edgecolors='k', cmap="coolwarm")
+                    scatter = ax.scatter(X_vis[:, 0], X_vis[:, 1], c=y_train_codes, edgecolors='k', cmap="coolwarm")
                     
                     model_title_name = "KNN" if isinstance(model, KNeighborsClassifier) else "SVM"
                     ax.set_title(f"{model_title_name} Decision Boundary")
@@ -1285,7 +1569,7 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
 
     st.subheader(f"Automatic Visualizations: {model_name}")
 
-    tabs_list = ["Actual vs Predicted", "Residuals", "Feature Influence"]
+    tabs_list = ["Residuals", "Feature Influence"]
     if isinstance(model, (DecisionTreeRegressor, RandomForestRegressor)):
         tabs_list.append("Decision Tree Diagram")
     elif isinstance(model, (KNeighborsRegressor, SVR)):
@@ -1294,54 +1578,6 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
     tabs = st.tabs(tabs_list)
 
     with tabs[0]:
-        if len(feature_names) == 1 and hasattr(model, "predict"):
-            fig, ax = plt.subplots(figsize=(7, 5))
-            
-            # Scatter plot of actual vs features
-            X_test_vals = results.get("X_test_vals", [])
-            if len(X_test_vals) == len(y_test) and len(X_test_vals) > 0:
-                ax.scatter(X_test_vals, y_test, color="blue", alpha=0.6, label="Actual Data")
-                
-                # Create line
-                x_min, x_max = min(X_test_vals), max(X_test_vals)
-                x_range = np.linspace(x_min, x_max, 100).reshape(-1, 1)
-                
-                # Check if model requires DataFrame
-                if hasattr(model, "feature_names_in_"):
-                    x_range_df = pd.DataFrame(x_range, columns=feature_names)
-                    y_range_pred = model.predict(x_range_df)
-                else:
-                    y_range_pred = model.predict(x_range)
-                
-                ax.plot(x_range, y_range_pred, color="red", linewidth=2, label="Model Prediction")
-                ax.set_xlabel(feature_names[0])
-                ax.set_ylabel("Target")
-                ax.set_title("1D Regression Model Diagram")
-                ax.legend()
-                render_figure(fig)
-                st.info("Displayed 1D Regression curve for single-feature dataset.")
-            else:
-                # Fallback
-                sns.scatterplot(x=y_test, y=y_pred, alpha=0.7, ax=ax)
-                min_val = float(min(y_test.min(), y_pred.min()))
-                max_val = float(max(y_test.max(), y_pred.max()))
-                ax.plot([min_val, max_val], [min_val, max_val], color="red", linestyle="--", linewidth=1.5)
-                ax.set_xlabel("Actual Values")
-                ax.set_ylabel("Predicted Values")
-                ax.set_title("Actual vs Predicted")
-                render_figure(fig)
-        else:
-            fig, ax = plt.subplots(figsize=(7, 5))
-            sns.scatterplot(x=y_test, y=y_pred, alpha=0.7, ax=ax)
-            min_val = float(min(y_test.min(), y_pred.min()))
-            max_val = float(max(y_test.max(), y_pred.max()))
-            ax.plot([min_val, max_val], [min_val, max_val], color="red", linestyle="--", linewidth=1.5)
-            ax.set_xlabel("Actual Values")
-            ax.set_ylabel("Predicted Values")
-            ax.set_title("Actual vs Predicted")
-            render_figure(fig)
-
-    with tabs[1]:
         residuals = y_test - y_pred
         fig, ax = plt.subplots(figsize=(8, 5))
         sns.histplot(residuals, kde=True, color="#d9683f", ax=ax)
@@ -1358,7 +1594,7 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
         ax2.set_ylabel("Residual")
         render_figure(fig2)
 
-    with tabs[2]:
+    with tabs[1]:
         if hasattr(model, "feature_importances_"):
             importance = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False).head(15)
             fig, ax = plt.subplots(figsize=(8, 5))
@@ -1380,7 +1616,7 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
             st.info("This model does not expose feature influence directly.")
 
     if isinstance(model, (DecisionTreeRegressor, RandomForestRegressor)):
-        with tabs[3]:
+        with tabs[2]:
             fig, ax = plt.subplots(figsize=(12, 8))
             tree_to_plot = model.estimators_[0] if isinstance(model, RandomForestRegressor) else model
             plot_tree(tree_to_plot, feature_names=feature_names, filled=True, ax=ax, max_depth=3)
@@ -1388,7 +1624,7 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
             ax.set_title(title)
             render_figure(fig)
     elif isinstance(model, (KNeighborsRegressor, SVR)):
-        with tabs[3]:
+        with tabs[2]:
             try:
                 X_train_df = results.get("X_train_df")
                 y_train_series = results.get("y_train_series")
@@ -1406,7 +1642,7 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
                         vis_model = clone(model)
                         vis_model.fit(X_vis, y_train)
                     elif X_train.shape[1] == 1:
-                        st.info("Please view the continuous 1D Regression curve in the 'Actual vs Predicted' tab above.")
+                        st.info("Regression value map is not available for single-feature training data.")
                         vis_model = None
                     else:
                         X_vis = X_train
@@ -1494,37 +1730,46 @@ def main():
                 Upload any CSV dataset to profile data quality, clean and transform features, run exploratory analysis,
                 and train machine learning models from one streamlined interface.
             </p>
+            <div class="hero-meta">
+                <span class="hero-chip">Data Cleaning</span>
+                <span class="hero-chip">EDA Visuals</span>
+                <span class="hero-chip">ML Training</span>
+                <span class="hero-chip">Export Ready</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
     sidebar = st.sidebar
-    sidebar.header("Workspace")
+    sidebar.markdown("<h3 class='sidebar-label'>Workspace</h3>", unsafe_allow_html=True)
     uploaded_file = sidebar.file_uploader("Upload a CSV file", type=["csv"])
 
     if uploaded_file is None:
         st.info("Upload a CSV file to begin automated exploratory data analysis and preprocessing.")
         st.stop()
 
-    sidebar.markdown("---")
-    sidebar.subheader("Process Navigator")
     sidebar.markdown(
-        "\n".join(
-            [
-                "- [Dataset Overview](#dataset-overview)",
-                "- [Automated Dataset Intelligence](#automated-dataset-intelligence)",
-                "- [Missing Values Before Cleaning](#missing-values-before-cleaning)",
-                "- [Data Cleaning](#data-cleaning)",
-                "- [Encoding](#encoding)",
-                "- [Feature Engineering](#feature-engineering)",
-                "- [Exploratory Data Analysis](#exploratory-data-analysis)",
-                "- [Scaling and PCA](#scaling-and-pca)",
-                "- [Model Training](#model-training)",
-                "- [Pipeline Summary](#pipeline-summary)",
-                "- [Notes](#notes)",
-            ]
-        )
+        """
+        <div class="sidebar-nav-wrap">
+            <h4 class="sidebar-nav-title">Process Navigator</h4>
+            <div class="sidebar-nav-list">
+                <a class="sidebar-nav-link" href="#dataset-overview">Dataset Overview</a>
+                <a class="sidebar-nav-link" href="#automated-dataset-intelligence">Automated Dataset Intelligence</a>
+                <a class="sidebar-nav-link" href="#missing-values-before-cleaning">Missing Values Before Cleaning</a>
+                <a class="sidebar-nav-link" href="#data-cleaning">Data Cleaning</a>
+                <a class="sidebar-nav-link" href="#encoding">Encoding</a>
+                <a class="sidebar-nav-link" href="#feature-engineering">Feature Engineering</a>
+                <a class="sidebar-nav-link" href="#exploratory-data-analysis">Exploratory Data Analysis</a>
+                <a class="sidebar-nav-link" href="#scaling-and-pca">Scaling and PCA</a>
+                <a class="sidebar-nav-link" href="#outlier-detection">Outlier Detection</a>
+                <a class="sidebar-nav-link" href="#model-training">Model Training</a>
+                <a class="sidebar-nav-link" href="#pipeline-summary">Pipeline Summary</a>
+                <a class="sidebar-nav-link" href="#notes">Notes</a>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     try:
@@ -1798,23 +2043,16 @@ def main():
     st.markdown("---")
     st.markdown("<div id='scaling-and-pca'></div>", unsafe_allow_html=True)
     render_section_header("Scaling and PCA")
+
+    st.subheader("Scaling")
     scaling_method = st.selectbox(
         "Scaling method for numeric columns",
         options=["None", "StandardScaler", "MinMaxScaler"],
         index=0,
     )
-    pca_enabled = st.checkbox("Apply PCA", value=False)
 
     processed_df = df.copy()
     numeric_columns = detect_numeric_columns(processed_df)
-
-    pca_component_limit = min(10, len(numeric_columns), len(processed_df))
-    if pca_component_limit >= 2:
-        n_components = st.slider("Number of PCA components", min_value=2, max_value=pca_component_limit, value=2)
-    else:
-        n_components = 2
-        if pca_enabled:
-            st.info("PCA needs at least 2 numeric columns and 2 rows.")
 
     if st.button("Apply Scaling"):
         if scaling_method != "None" and numeric_columns:
@@ -1826,24 +2064,47 @@ def main():
         else:
             st.info("No numeric columns available to scale or scaling method is None.")
 
-    if pca_enabled and numeric_columns and pca_component_limit >= 2:
-        with st.spinner("Running PCA..."):
-            pca_df, variance, pca_error = apply_pca(processed_df, n_components)
-        if pca_error:
-            st.warning(pca_error)
+    st.subheader("PCA")
+    st.caption("PCA is independent from scaling. You can run either step separately.")
+    selected_pca_cols = st.multiselect(
+        "Select numeric columns for PCA",
+        options=numeric_columns,
+        default=numeric_columns[: min(5, len(numeric_columns))],
+        help="PCA will be computed only on these selected numeric columns.",
+        key="pca_selected_columns",
+    )
+
+    pca_component_limit = min(10, len(selected_pca_cols), len(processed_df))
+    if pca_component_limit >= 2:
+        n_components = st.slider("Number of PCA components", min_value=2, max_value=pca_component_limit, value=2)
+    else:
+        n_components = 2
+        st.info("PCA needs at least 2 selected numeric columns and 2 rows.")
+
+    if st.button("Run PCA"):
+        if not selected_pca_cols:
+            st.warning("Select at least two numeric columns to run PCA.")
+        elif pca_component_limit < 2:
+            st.warning("PCA needs at least 2 selected numeric columns and 2 rows.")
         else:
-            st.subheader("PCA Results")
-            st.write("Explained variance ratio:")
-            st.write(variance.round(4))
-            if pca_df.shape[1] >= 2:
-                fig, ax = plt.subplots(figsize=(8, 6))
-                sns.scatterplot(x=pca_df.iloc[:, 0], y=pca_df.iloc[:, 1], ax=ax)
-                ax.set_xlabel("PCA component 1")
-                ax.set_ylabel("PCA component 2")
-                ax.set_title("PCA 2D Scatter Plot")
-                st.pyplot(fig)
-            pipeline_steps.append(f"Applied PCA with {n_components} components")
-            processed_df = pd.concat([processed_df.reset_index(drop=True), pca_df.reset_index(drop=True)], axis=1)
+            with st.spinner("Running PCA..."):
+                pca_df, variance, pca_error = apply_pca(processed_df, n_components, selected_pca_cols)
+            if pca_error:
+                st.warning(pca_error)
+            else:
+                st.subheader("PCA Results")
+                st.write("Selected PCA columns:", selected_pca_cols)
+                st.write("Explained variance ratio:")
+                st.write(variance.round(4))
+                if pca_df.shape[1] >= 2:
+                    fig, ax = plt.subplots(figsize=(8, 6))
+                    sns.scatterplot(x=pca_df.iloc[:, 0], y=pca_df.iloc[:, 1], ax=ax)
+                    ax.set_xlabel("PCA component 1")
+                    ax.set_ylabel("PCA component 2")
+                    ax.set_title("PCA 2D Scatter Plot")
+                    st.pyplot(fig)
+                pipeline_steps.append(f"Applied PCA with {n_components} components")
+                processed_df = pd.concat([processed_df.reset_index(drop=True), pca_df.reset_index(drop=True)], axis=1)
 
     st.write("Preview of the processed dataset after applied transformations.")
     st.dataframe(processed_df.head(20))
@@ -1856,6 +2117,29 @@ def main():
         file_name="processed_dataset.csv",
         mime="text/csv",
     )
+
+    st.markdown("---")
+    st.markdown("<div id='outlier-detection'></div>", unsafe_allow_html=True)
+    render_section_header("Outlier Detection")
+    st.write("Identify potential outliers in numeric columns using the IQR rule (values outside 1.5 x IQR).")
+
+    outlier_summary, outlier_mask = summarize_outliers_iqr(processed_df)
+    if outlier_summary.empty:
+        st.success("No potential outliers were detected in numeric columns using the IQR rule.")
+    else:
+        total_outlier_rows = int(outlier_mask.sum())
+        st.metric("Rows With At Least One Outlier", total_outlier_rows)
+        st.dataframe(outlier_summary, use_container_width=True)
+
+        with st.expander("Preview rows with outliers"):
+            preview_limit = st.slider(
+                "Rows to preview",
+                min_value=5,
+                max_value=min(200, max(5, total_outlier_rows)),
+                value=min(20, max(5, total_outlier_rows)),
+                key="outlier_preview_limit",
+            )
+            st.dataframe(processed_df[outlier_mask].head(preview_limit), use_container_width=True)
 
     st.markdown("---")
     st.markdown("<div id='model-training'></div>", unsafe_allow_html=True)
