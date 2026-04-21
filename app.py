@@ -13,6 +13,7 @@ from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor, plot_tree
 from sklearn.cluster import KMeans
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, mean_squared_error, r2_score, confusion_matrix
+from sklearn.inspection import DecisionBoundaryDisplay
 from typing import List, Tuple, Dict, Any
 
 st.set_page_config(
@@ -980,6 +981,8 @@ def train_classification_model(
             "feature_names": X.columns.tolist(),
             "y_test": y_test.reset_index(drop=True),
             "y_pred": pd.Series(y_pred),
+            "X_train_df": X_train,
+            "y_train_series": y_train,
         }
     except Exception as e:
         return {"error": str(e)}
@@ -1092,6 +1095,8 @@ def train_regression_model(
             "y_test": y_test.reset_index(drop=True),
             "y_pred": pd.Series(y_pred),
             "X_test_vals": X_test.iloc[:, 0].values.tolist() if len(X.columns) == 1 else [],
+            "X_train_df": X_train,
+            "y_train_series": y_train,
         }
     except Exception as e:
         return {"error": str(e)}
@@ -1162,9 +1167,15 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
 
     st.subheader(f"Automatic Visualizations: {model_name}")
 
-    viz_tab1, viz_tab2, viz_tab3 = st.tabs(["Confusion Matrix", "Predicted vs Actual", "Feature Influence"])
+    tabs_list = ["Confusion Matrix", "Predicted vs Actual", "Feature Influence"]
+    if isinstance(model, (DecisionTreeClassifier, RandomForestClassifier)):
+        tabs_list.append("Decision Tree Diagram")
+    elif isinstance(model, (KNeighborsClassifier, SVC)):
+        tabs_list.append("Decision Boundary Map")
+        
+    tabs = st.tabs(tabs_list)
 
-    with viz_tab1:
+    with tabs[0]:
         labels = sorted(set(y_test.tolist() + y_pred.tolist()))
         cm = confusion_matrix(y_test, y_pred, labels=labels)
         fig, ax = plt.subplots(figsize=(7, 5))
@@ -1174,7 +1185,7 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
         ax.set_title("Confusion Matrix")
         render_figure(fig)
 
-    with viz_tab2:
+    with tabs[1]:
         compare_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
         actual_counts = compare_df["Actual"].value_counts().rename("Actual")
         pred_counts = compare_df["Predicted"].value_counts().rename("Predicted")
@@ -1189,13 +1200,8 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
         ax.set_ylabel("Count")
         render_figure(fig)
 
-    with viz_tab3:
-        if isinstance(model, DecisionTreeClassifier):
-            fig, ax = plt.subplots(figsize=(12, 8))
-            plot_tree(model, feature_names=feature_names, class_names=True, filled=True, ax=ax, max_depth=3)
-            ax.set_title("Decision Tree Plot (max depth 3)")
-            render_figure(fig)
-        elif hasattr(model, "feature_importances_"):
+    with tabs[2]:
+        if hasattr(model, "feature_importances_"):
             importance = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False).head(15)
             fig, ax = plt.subplots(figsize=(8, 5))
             sns.barplot(x=importance.values, y=importance.index, orient="h", hue=importance.index, legend=False, palette="viridis", ax=ax)
@@ -1218,6 +1224,52 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
         else:
             st.info("This model does not expose feature influence directly.")
 
+    if isinstance(model, (DecisionTreeClassifier, RandomForestClassifier)):
+        with tabs[3]:
+            fig, ax = plt.subplots(figsize=(12, 8))
+            tree_to_plot = model.estimators_[0] if isinstance(model, RandomForestClassifier) else model
+            plot_tree(tree_to_plot, feature_names=feature_names, class_names=True, filled=True, ax=ax, max_depth=3)
+            title = "Random Forest - First Tree Diagram (max depth 3)" if isinstance(model, RandomForestClassifier) else "Decision Tree Diagram (max depth 3)"
+            ax.set_title(title)
+            render_figure(fig)
+    elif isinstance(model, (KNeighborsClassifier, SVC)):
+        with tabs[3]:
+            try:
+                X_train_df = results.get("X_train_df")
+                y_train_series = results.get("y_train_series")
+                
+                if X_train_df is not None and y_train_series is not None:
+                    X_train = getattr(X_train_df, "values", X_train_df)
+                    y_train = getattr(y_train_series, "values", y_train_series)
+                    
+                    if X_train.shape[1] > 2:
+                        pca = PCA(n_components=2)
+                        X_vis = pca.fit_transform(X_train)
+                        vis_names = ["PCA Component 1", "PCA Component 2"]
+                        
+                        import copy
+                        from sklearn.base import clone
+                        vis_model = clone(model)
+                        vis_model.fit(X_vis, y_train)
+                    else:
+                        X_vis = X_train
+                        vis_names = feature_names if len(feature_names) == 2 else ["Feature 1", "Feature 2"]
+                        vis_model = model
+                        
+                    fig, ax = plt.subplots(figsize=(8, 6))
+                    DecisionBoundaryDisplay.from_estimator(vis_model, X_vis, response_method="predict", alpha=0.4, ax=ax, cmap="coolwarm")
+                    scatter = ax.scatter(X_vis[:, 0], X_vis[:, 1], c=y_train, edgecolors='k', cmap="coolwarm")
+                    
+                    model_title_name = "KNN" if isinstance(model, KNeighborsClassifier) else "SVM"
+                    ax.set_title(f"{model_title_name} Decision Boundary")
+                    ax.set_xlabel(vis_names[0])
+                    ax.set_ylabel(vis_names[1])
+                    render_figure(fig)
+                else:
+                    st.info("Training data not available in results dict to plot decision boundary.")
+            except Exception as e:
+                st.info(f"Could not generate Decision Boundary: {e}")
+
 
 def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> None:
     y_test_raw = results.get("y_test", [])
@@ -1233,9 +1285,15 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
 
     st.subheader(f"Automatic Visualizations: {model_name}")
 
-    viz_tab1, viz_tab2, viz_tab3 = st.tabs(["Actual vs Predicted", "Residuals", "Feature Influence"])
+    tabs_list = ["Actual vs Predicted", "Residuals", "Feature Influence"]
+    if isinstance(model, (DecisionTreeRegressor, RandomForestRegressor)):
+        tabs_list.append("Decision Tree Diagram")
+    elif isinstance(model, (KNeighborsRegressor, SVR)):
+        tabs_list.append("Regression Value Map")
+        
+    tabs = st.tabs(tabs_list)
 
-    with viz_tab1:
+    with tabs[0]:
         if len(feature_names) == 1 and hasattr(model, "predict"):
             fig, ax = plt.subplots(figsize=(7, 5))
             
@@ -1283,7 +1341,7 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
             ax.set_title("Actual vs Predicted")
             render_figure(fig)
 
-    with viz_tab2:
+    with tabs[1]:
         residuals = y_test - y_pred
         fig, ax = plt.subplots(figsize=(8, 5))
         sns.histplot(residuals, kde=True, color="#d9683f", ax=ax)
@@ -1300,13 +1358,8 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
         ax2.set_ylabel("Residual")
         render_figure(fig2)
 
-    with viz_tab3:
-        if isinstance(model, DecisionTreeRegressor):
-            fig, ax = plt.subplots(figsize=(12, 8))
-            plot_tree(model, feature_names=feature_names, filled=True, ax=ax, max_depth=3)
-            ax.set_title("Decision Tree Plot (max depth 3)")
-            render_figure(fig)
-        elif hasattr(model, "feature_importances_"):
+    with tabs[2]:
+        if hasattr(model, "feature_importances_"):
             importance = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False).head(15)
             fig, ax = plt.subplots(figsize=(8, 5))
             sns.barplot(x=importance.values, y=importance.index, orient="h", hue=importance.index, legend=False, palette="viridis", ax=ax)
@@ -1325,6 +1378,56 @@ def plot_regression_visualizations(results: Dict[str, Any], model_name: str) -> 
             render_figure(fig)
         else:
             st.info("This model does not expose feature influence directly.")
+
+    if isinstance(model, (DecisionTreeRegressor, RandomForestRegressor)):
+        with tabs[3]:
+            fig, ax = plt.subplots(figsize=(12, 8))
+            tree_to_plot = model.estimators_[0] if isinstance(model, RandomForestRegressor) else model
+            plot_tree(tree_to_plot, feature_names=feature_names, filled=True, ax=ax, max_depth=3)
+            title = "Random Forest - First Tree Diagram (max depth 3)" if isinstance(model, RandomForestRegressor) else "Decision Tree Diagram (max depth 3)"
+            ax.set_title(title)
+            render_figure(fig)
+    elif isinstance(model, (KNeighborsRegressor, SVR)):
+        with tabs[3]:
+            try:
+                X_train_df = results.get("X_train_df")
+                y_train_series = results.get("y_train_series")
+                
+                if X_train_df is not None and y_train_series is not None:
+                    X_train = getattr(X_train_df, "values", X_train_df)
+                    y_train = getattr(y_train_series, "values", y_train_series)
+                    
+                    if X_train.shape[1] > 2:
+                        pca = PCA(n_components=2)
+                        X_vis = pca.fit_transform(X_train)
+                        vis_names = ["PCA Component 1", "PCA Component 2"]
+                        
+                        from sklearn.base import clone
+                        vis_model = clone(model)
+                        vis_model.fit(X_vis, y_train)
+                    elif X_train.shape[1] == 1:
+                        st.info("Please view the continuous 1D Regression curve in the 'Actual vs Predicted' tab above.")
+                        vis_model = None
+                    else:
+                        X_vis = X_train
+                        vis_names = feature_names if len(feature_names) == 2 else ["Feature 1", "Feature 2"]
+                        vis_model = model
+                        
+                    if vis_model:
+                        fig, ax = plt.subplots(figsize=(8, 6))
+                        DecisionBoundaryDisplay.from_estimator(vis_model, X_vis, response_method="predict", alpha=0.6, ax=ax, cmap="coolwarm")
+                        scatter = ax.scatter(X_vis[:, 0], X_vis[:, 1], c=y_train, edgecolors='k', cmap="coolwarm")
+                        
+                        model_title_name = "KNN" if isinstance(model, KNeighborsRegressor) else "SVM"
+                        ax.set_title(f"{model_title_name} Regression Value Map")
+                        ax.set_xlabel(vis_names[0])
+                        ax.set_ylabel(vis_names[1])
+                        fig.colorbar(scatter, ax=ax, label="Target Predict Map")
+                        render_figure(fig)
+                else:
+                    st.info("Training data not available in results dict to plot Regression Map.")
+            except Exception as e:
+                st.info(f"Could not generate Regression Map: {e}")
 
 
 def plot_clustering_visualizations(results: Dict[str, Any], selected_cols: List[str]) -> None:
@@ -1833,7 +1936,10 @@ def main():
             elif model_name == "SVM":
                 model_params["C"] = st.number_input("C", min_value=0.0001, max_value=1000.0, value=1.0, step=0.1, key="class_svm_c")
                 model_params["kernel"] = st.selectbox("kernel", ["linear", "rbf", "poly", "sigmoid"], index=1, key="class_svm_kernel")
-                model_params["degree"] = st.number_input("degree", min_value=1, max_value=10, value=3, step=1, key="class_svm_degree")
+                if model_params["kernel"] == "poly":
+                    model_params["degree"] = st.number_input("degree", min_value=1, max_value=10, value=3, step=1, key="class_svm_degree")
+                else:
+                    model_params["degree"] = 3
                 model_params["gamma"] = st.selectbox("gamma", ["scale", "auto"], index=0, key="class_svm_gamma")
                 model_params["coef0"] = st.number_input("coef0", min_value=0.0, max_value=10.0, value=0.0, step=0.1, key="class_svm_coef0")
                 model_params["shrinking"] = st.checkbox("shrinking", value=True, key="class_svm_shrinking")
@@ -1973,7 +2079,10 @@ def main():
             elif model_name == "SVM":
                 model_params["C"] = st.number_input("C", min_value=0.0001, max_value=1000.0, value=1.0, step=0.1, key="reg_svm_c")
                 model_params["kernel"] = st.selectbox("kernel", ["linear", "rbf", "poly", "sigmoid"], index=1, key="reg_svm_kernel")
-                model_params["degree"] = st.number_input("degree", min_value=1, max_value=10, value=3, step=1, key="reg_svm_degree")
+                if model_params["kernel"] == "poly":
+                    model_params["degree"] = st.number_input("degree", min_value=1, max_value=10, value=3, step=1, key="reg_svm_degree")
+                else:
+                    model_params["degree"] = 3
                 model_params["gamma"] = st.selectbox("gamma", ["scale", "auto"], index=0, key="reg_svm_gamma")
                 model_params["coef0"] = st.number_input("coef0", min_value=0.0, max_value=10.0, value=0.0, step=0.1, key="reg_svm_coef0")
                 model_params["tol"] = st.number_input("tol", min_value=0.000001, max_value=1.0, value=0.001, step=0.0001, format="%.6f", key="reg_svm_tol")
