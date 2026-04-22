@@ -630,7 +630,10 @@ def generate_summary_statistics(df: pd.DataFrame) -> pd.DataFrame:
 
 def render_figure(fig: plt.Figure) -> None:
     try:
-        st.pyplot(fig, use_container_width=True, clear_figure=True)
+        try:
+            st.pyplot(fig, width="stretch", clear_figure=True)
+        except TypeError:
+            st.pyplot(fig, use_container_width=True, clear_figure=True)
     except TypeError:
         st.pyplot(fig, clear_figure=True)
     finally:
@@ -760,6 +763,60 @@ def apply_pca(df: pd.DataFrame, n_components: int, selected_cols: List[str]) -> 
     columns = [f"pca_{i+1}" for i in range(n_components)]
     pca_df = pd.DataFrame(components, columns=columns, index=numeric_df.index)
     return pca_df, pca.explained_variance_ratio_, ""
+
+
+def plot_pca_projection(pca_df: pd.DataFrame, variance: np.ndarray) -> None:
+    if pca_df.shape[1] < 2:
+        st.info("PCA visualization requires at least two components.")
+        return
+
+    component_x = pca_df.columns[0]
+    component_y = pca_df.columns[1]
+    explained_x = variance[0] * 100 if len(variance) > 0 else None
+    explained_y = variance[1] * 100 if len(variance) > 1 else None
+
+    if pca_df.shape[1] == 2:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.scatterplot(
+            data=pca_df,
+            x=component_x,
+            y=component_y,
+            ax=ax,
+            s=55,
+            alpha=0.8,
+            edgecolor="white",
+            linewidth=0.4,
+            color="#245f45",
+        )
+        ax.set_title("PCA 2D Scatter Plot")
+        ax.set_xlabel(f"{component_x} ({explained_x:.1f}% variance)" if explained_x is not None else component_x)
+        ax.set_ylabel(f"{component_y} ({explained_y:.1f}% variance)" if explained_y is not None else component_y)
+        ax.axhline(0, color="#b7c6bb", linewidth=0.8, linestyle="--")
+        ax.axvline(0, color="#b7c6bb", linewidth=0.8, linestyle="--")
+        ax.grid(True, linestyle=":", linewidth=0.6, alpha=0.5)
+        fig.tight_layout()
+        render_figure(fig)
+        return
+
+    component_z = pca_df.columns[2]
+    explained_z = variance[2] * 100 if len(variance) > 2 else None
+    fig = plt.figure(figsize=(9, 7))
+    ax = fig.add_subplot(111, projection="3d")
+    ax.scatter(
+        pca_df[component_x],
+        pca_df[component_y],
+        pca_df[component_z],
+        s=45,
+        alpha=0.78,
+        c="#245f45",
+        edgecolors="white",
+        linewidths=0.35,
+    )
+    ax.set_title("PCA 3D Scatter Plot")
+    ax.set_xlabel(f"{component_x} ({explained_x:.1f}% variance)" if explained_x is not None else component_x)
+    ax.set_ylabel(f"{component_y} ({explained_y:.1f}% variance)" if explained_y is not None else component_y)
+    ax.set_zlabel(f"{component_z} ({explained_z:.1f}% variance)" if explained_z is not None else component_z)
+    render_figure(fig)
 
 
 def dataframe_to_csv(df: pd.DataFrame) -> bytes:
@@ -1802,7 +1859,7 @@ def main():
     st.write("**Shape:**", df.shape)
     st.write("**Columns:**", list(df.columns))
     st.write("**Data types:**")
-    st.dataframe(pd.DataFrame(df.dtypes, columns=["dtype"]))
+    st.dataframe(pd.DataFrame({"dtype": df.dtypes.astype(str)}))
 
     st.markdown("---")
     st.markdown("<div id='automated-dataset-intelligence'></div>", unsafe_allow_html=True)
@@ -2074,9 +2131,16 @@ def main():
         key="pca_selected_columns",
     )
 
-    pca_component_limit = min(10, len(selected_pca_cols), len(processed_df))
-    if pca_component_limit >= 2:
-        n_components = st.slider("Number of PCA components", min_value=2, max_value=pca_component_limit, value=2)
+    pca_component_limit = min(len(selected_pca_cols), len(processed_df))
+    pca_component_options = [count for count in [2, 3] if count <= pca_component_limit]
+    if pca_component_options:
+        default_index = 0
+        n_components = st.selectbox(
+            "Number of PCA components",
+            options=pca_component_options,
+            index=default_index,
+            help="Select 2 for a 2D plot or 3 for a 3D plot.",
+        )
     else:
         n_components = 2
         st.info("PCA needs at least 2 selected numeric columns and 2 rows.")
@@ -2084,7 +2148,7 @@ def main():
     if st.button("Run PCA"):
         if not selected_pca_cols:
             st.warning("Select at least two numeric columns to run PCA.")
-        elif pca_component_limit < 2:
+        elif not pca_component_options:
             st.warning("PCA needs at least 2 selected numeric columns and 2 rows.")
         else:
             with st.spinner("Running PCA..."):
@@ -2096,13 +2160,7 @@ def main():
                 st.write("Selected PCA columns:", selected_pca_cols)
                 st.write("Explained variance ratio:")
                 st.write(variance.round(4))
-                if pca_df.shape[1] >= 2:
-                    fig, ax = plt.subplots(figsize=(8, 6))
-                    sns.scatterplot(x=pca_df.iloc[:, 0], y=pca_df.iloc[:, 1], ax=ax)
-                    ax.set_xlabel("PCA component 1")
-                    ax.set_ylabel("PCA component 2")
-                    ax.set_title("PCA 2D Scatter Plot")
-                    st.pyplot(fig)
+                plot_pca_projection(pca_df, variance)
                 pipeline_steps.append(f"Applied PCA with {n_components} components")
                 processed_df = pd.concat([processed_df.reset_index(drop=True), pca_df.reset_index(drop=True)], axis=1)
 
