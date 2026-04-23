@@ -17,7 +17,7 @@ from sklearn.inspection import DecisionBoundaryDisplay
 from typing import List, Tuple, Dict, Any
 
 st.set_page_config(
-    page_title="Automated EDA & Preprocessing",
+    page_title="Automated EDA, Preprocessing & Model Training",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -253,73 +253,95 @@ def apply_ui_theme() -> None:
         }
 
         .hero-shell {
-            background: linear-gradient(130deg, #245f45 0%, #143b2a 45%, #0f291e 100%);
+            background: linear-gradient(135deg, rgba(20, 59, 42, 0.95), rgba(15, 30, 22, 0.98)),
+                        radial-gradient(circle at 100% 0%, rgba(217, 104, 63, 0.25), transparent 50%),
+                        radial-gradient(circle at 0% 100%, rgba(36, 95, 69, 0.4), transparent 50%);
             background-size: 200% 200%;
             color: #f2f8f4;
-            border-radius: 20px;
-            padding: 1.35rem 1.6rem;
-            margin-bottom: 1.1rem;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 18px 40px rgba(24, 44, 33, 0.3);
+            border-radius: 24px;
+            padding: 1.8rem 2.2rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 24px 48px rgba(10, 25, 18, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             position: relative;
             overflow: hidden;
-            animation: glowShift 14s ease-in-out infinite;
+            animation: glowShift 12s ease-in-out infinite;
+            backdrop-filter: blur(12px);
         }
 
         .hero-shell::after {
             content: "";
             position: absolute;
-            inset: auto -20% -70% 45%;
-            width: 320px;
-            height: 320px;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
+            inset: auto -15% -50% 55%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
             pointer-events: none;
+            mix-blend-mode: overlay;
         }
 
         .hero-title {
             margin: 0;
-            font-size: clamp(1.3rem, 1.8vw, 2rem);
-            font-weight: 700;
-            color: #f6fbf8;
+            font-size: clamp(1.6rem, 2.2vw, 2.6rem);
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
         .hero-subtitle {
-            margin-top: 0.45rem;
+            margin-top: 0.6rem;
             margin-bottom: 0;
-            color: #d3e9dc;
-            line-height: 1.45;
-            font-size: 0.95rem;
+            color: #d8e8df;
+            line-height: 1.55;
+            font-size: 1.05rem;
+            max-width: 85%;
         }
 
         .hero-meta {
-            margin-top: 0.8rem;
+            margin-top: 1.2rem;
             display: flex;
             flex-wrap: wrap;
-            gap: 0.45rem;
+            gap: 0.6rem;
             position: relative;
             z-index: 1;
         }
 
         .hero-chip {
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            color: #f3fbf6;
-            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 999px;
-            padding: 0.22rem 0.7rem;
-            font-size: 0.74rem;
-            letter-spacing: 0.02em;
-            backdrop-filter: blur(2px);
+            padding: 0.35rem 0.9rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            backdrop-filter: blur(4px);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .hero-chip:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
         }
 
         .section-title-wrap {
-            margin-top: 0.3rem;
-            margin-bottom: 0.7rem;
-            background: var(--surface);
+            margin-top: 0.4rem;
+            margin-bottom: 0.8rem;
+            background: linear-gradient(180deg, var(--surface) 0%, var(--surface-soft) 100%);
             border: 1px solid var(--line);
             border-radius: 14px;
-            padding: 0.8rem 0.95rem;
-            box-shadow: var(--shadow-soft);
-            border-left: 5px solid var(--accent);
+            padding: 0.85rem 1.1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            border-left: 6px solid var(--accent);
+            transition: box-shadow 0.2s ease;
+        }
+
+        .section-title-wrap:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
         }
 
         .section-kicker {
@@ -332,7 +354,7 @@ def apply_ui_theme() -> None:
 
         .section-title {
             margin: 0.2rem 0 0;
-            font-size: 1.15rem;
+            font-size: 1.25rem;
             font-weight: 700;
             color: var(--text-main);
         }
@@ -342,49 +364,66 @@ def apply_ui_theme() -> None:
             border-radius: 12px;
             overflow: hidden;
             background: var(--surface);
-            box-shadow: var(--shadow-soft);
+            box-shadow: 0 8px 24px rgba(22, 44, 32, 0.06);
         }
 
         div[data-testid="stMetric"] {
-            background: linear-gradient(180deg, #ffffff 0%, #f5faf7 100%);
+            background: linear-gradient(180deg, #ffffff 0%, #f4f9f6 100%);
             border: 1px solid var(--line);
-            border-radius: 14px;
-            padding: 0.45rem 0.65rem;
-            box-shadow: var(--shadow-soft);
+            border-radius: 16px;
+            padding: 0.65rem 0.85rem;
+            box-shadow: 0 6px 18px rgba(22, 44, 32, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        div[data-testid="stMetric"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(22, 44, 32, 0.1);
+        }
+
+        div[data-testid="stMetric"]::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: var(--brand);
         }
 
         div[data-testid="stMetricValue"] {
             font-family: var(--font-display);
-            color: #1e5038;
+            color: #1a4531;
             letter-spacing: -0.02em;
+            font-size: 1.8rem;
         }
 
         div[data-testid="stMetricLabel"] {
             color: var(--text-muted);
             font-weight: 600;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
-            font-size: 0.72rem;
+            font-size: 0.75rem;
         }
 
         .stButton > button,
         .stDownloadButton > button {
             border-radius: 12px;
-            border: 1px solid #1e5038;
-            background: linear-gradient(180deg, #2d7656 0%, #1b4d37 100%);
+            border: 1px solid #194631;
+            background: linear-gradient(180deg, #286d4e 0%, #17422f 100%);
             color: #f4fbf7;
             font-weight: 600;
-            box-shadow: 0 8px 18px rgba(30, 80, 56, 0.2);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: 0 6px 16px rgba(30, 80, 56, 0.25);
+            transition: all 0.2s ease;
         }
 
         .stButton > button:hover,
         .stDownloadButton > button:hover {
-            border-color: #153a29;
-            background: linear-gradient(180deg, #1f5a40 0%, #174632 100%);
+            border-color: #113222;
+            background: linear-gradient(180deg, #1c4d37 0%, #113425 100%);
             color: #ffffff;
-            transform: translateY(-1px);
-            box-shadow: 0 10px 20px rgba(30, 80, 56, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(30, 80, 56, 0.35);
         }
 
         .stTabs [data-baseweb="tab-list"] {
@@ -1787,7 +1826,7 @@ def main():
     st.markdown(
         """
         <div class="hero-shell">
-            <h1 class="hero-title">Automated EDA and Data Preprocessing Studio</h1>
+            <h1 class="hero-title">Automated EDA, Preprocessing & Model Training</h1>
             <p class="hero-subtitle">
                 Upload any CSV dataset to profile data quality, clean and transform features, run exploratory analysis,
                 and train machine learning models from one streamlined interface.
