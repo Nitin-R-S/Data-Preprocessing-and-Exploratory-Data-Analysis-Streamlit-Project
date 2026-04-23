@@ -683,9 +683,10 @@ def plot_countplot(df: pd.DataFrame, column: str) -> None:
             return
         fig, ax = plt.subplots(figsize=(10, 5))
         fig.patch.set_facecolor("white")
-        sns.countplot(data=df, x=column, order=order, palette="viridis", ax=ax)
+        sns.countplot(data=df, x=column, order=order, hue=column, legend=False, palette="viridis", ax=ax)
         ax.set_title(f"Count Plot for {column}")
-        plt.xticks(rotation=45, ha="right")
+        ax.set_xticks(ax.get_xticks())
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
         render_figure(fig)
     except Exception as exc:
         st.warning(f"Could not render count plot: {exc}")
@@ -1588,24 +1589,28 @@ def plot_classification_visualizations(results: Dict[str, Any], model_name: str)
                         X_vis = pca.fit_transform(X_train)
                         vis_names = ["PCA Component 1", "PCA Component 2"]
                         
-                        import copy
+                        
                         from sklearn.base import clone
                         vis_model = clone(model)
                         vis_model.fit(X_vis, y_train)
+                    elif X_train.shape[1] == 1:
+                        st.info("Decision Boundary Map is not available for single-feature training data.")
+                        vis_model = None
                     else:
                         X_vis = X_train
                         vis_names = feature_names if len(feature_names) == 2 else ["Feature 1", "Feature 2"]
                         vis_model = model
                         
-                    fig, ax = plt.subplots(figsize=(8, 6))
-                    DecisionBoundaryDisplay.from_estimator(vis_model, X_vis, response_method="predict", alpha=0.4, ax=ax, cmap="coolwarm")
-                    scatter = ax.scatter(X_vis[:, 0], X_vis[:, 1], c=y_train_codes, edgecolors='k', cmap="coolwarm")
-                    
-                    model_title_name = "KNN" if isinstance(model, KNeighborsClassifier) else "SVM"
-                    ax.set_title(f"{model_title_name} Decision Boundary")
-                    ax.set_xlabel(vis_names[0])
-                    ax.set_ylabel(vis_names[1])
-                    render_figure(fig)
+                    if vis_model:
+                        fig, ax = plt.subplots(figsize=(8, 6))
+                        DecisionBoundaryDisplay.from_estimator(vis_model, X_vis, response_method="predict", alpha=0.4, ax=ax, cmap="coolwarm")
+                        ax.scatter(X_vis[:, 0], X_vis[:, 1], c=y_train_codes, edgecolors='k', cmap="coolwarm")
+                        
+                        model_title_name = "KNN" if isinstance(model, KNeighborsClassifier) else "SVM"
+                        ax.set_title(f"{model_title_name} Decision Boundary")
+                        ax.set_xlabel(vis_names[0])
+                        ax.set_ylabel(vis_names[1])
+                        render_figure(fig)
                 else:
                     st.info("Training data not available in results dict to plot decision boundary.")
             except Exception as e:
@@ -1749,7 +1754,7 @@ def plot_clustering_visualizations(results: Dict[str, Any], selected_cols: List[
             ax.set_xlabel(selected_cols[0])
             ax.set_ylabel(selected_cols[1])
             ax.set_title("Cluster Scatter (First Two Selected Features)")
-            plt.colorbar(scatter, ax=ax, label="Cluster")
+            fig.colorbar(scatter, ax=ax, label="Cluster")
             render_figure(fig)
         else:
             st.info("Select at least two columns to display cluster scatter plot.")
@@ -2348,7 +2353,7 @@ def main():
                 if "error" in results:
                     st.error(f"Error: {results['error']}")
                 else:
-                    st.success(f"Model trained successfully!")
+                    st.success("Model trained successfully!")
                     col1, col2, col3, col4 = st.columns(4)
                     col1.metric("Accuracy", f"{results['accuracy']:.4f}")
                     col2.metric("Precision", f"{results['precision']:.4f}")
@@ -2483,7 +2488,7 @@ def main():
                 if "error" in results:
                     st.error(f"Error: {results['error']}")
                 else:
-                    st.success(f"Model trained successfully!")
+                    st.success("Model trained successfully!")
                     col1, col2, col3 = st.columns(3)
                     col1.metric("R² Score", f"{results['r2_score']:.4f}")
                     col2.metric("RMSE", f"{results['rmse']:.4f}")
