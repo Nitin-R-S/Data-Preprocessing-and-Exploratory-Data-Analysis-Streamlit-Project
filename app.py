@@ -2245,7 +2245,29 @@ def main():
 
     st.markdown("---")
     st.markdown("<div id='model-training'></div>", unsafe_allow_html=True)
-    render_section_header("Model Training")
+    
+    render_section_header("Model Selection & Training Analysis")
+    
+    # Perform pre-training analysis
+    with st.spinner("Analyzing processed data for model recommendations..."):
+        final_analysis = analyze_dataset(processed_df)
+        recs = model_recommendations(final_analysis)
+        prep_sug = preprocessing_suggestions(final_analysis)
+        
+    st.info(f"**Insight:** {recs['best_model']} based on the uploaded data of {final_analysis['rows']} rows and {len(final_analysis['numeric_cols'])} numeric features.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Modeling Recommendations")
+        for rec in recs["recommendation_lines"]:
+            st.markdown(f"- {rec}")
+    with col2:
+        st.subheader("Data Status & Remaining Preprocessing")
+        for sug in prep_sug:
+            st.markdown(f"- {sug}")
+            
+    st.markdown("<br>", unsafe_allow_html=True)
+    render_section_header("Model Training Configuration")
     
     model_type = st.selectbox(
         "Select Model Type",
