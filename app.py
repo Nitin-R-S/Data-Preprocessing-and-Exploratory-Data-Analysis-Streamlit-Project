@@ -1937,311 +1937,369 @@ def main():
         st.write("Regression target candidates:", analysis["regression_targets"][:10])
 
     st.markdown("---")
-    st.markdown("<div id='missing-values-before-cleaning'></div>", unsafe_allow_html=True)
-    render_section_header("Missing Values Before Cleaning")
-    original_missing_summary = get_missing_summary(df)
-    if original_missing_summary["missing_count"].sum() == 0:
-        st.success("No missing values detected in the uploaded dataset.")
+    st.markdown("<div id='preprocessing-mode'></div>", unsafe_allow_html=True)
+    render_section_header("Preprocessing Mode")
+    
+    col_a, col_b = st.columns([1, 2])
+    with col_a:
+        prep_mode = st.radio(
+            "Select your preprocessing path:",
+            options=["Manual (Step-by-Step)", "Automatic (One-Click)"],
+            index=0,
+            help="Automatic applies default sensible transformations. Manual allows granular control."
+        )
+    with col_b:
+        if prep_mode == "Automatic (One-Click)":
+            st.info("⚡ **Automatic Mode:** Instantly cleans missing values, encodes categories, and scales features so you can train models quickly.")
+        else:
+            st.info("⚙️ **Manual Mode:** Check summaries and apply different operations step-by-step for exploration.")
+
+    if prep_mode == "Automatic (One-Click)":
+        with st.spinner("Executing Automated Preprocessing Engine..."):
+            processed_df = df.copy()
+            
+            # 1. Duplicates
+            processed_df = remove_duplicate_rows(processed_df)
+            
+            # Detect
+            missing_num = [col for col in detect_numeric_columns(processed_df) if processed_df[col].isna().any()]
+            missing_cat = [col for col in detect_categorical_columns(processed_df) if processed_df[col].isna().any()]
+            
+            # 2. Missing Values
+            if missing_num or missing_cat:
+                processed_df = fill_missing_values(processed_df, "mean", "mode", missing_num, missing_cat)
+            
+            # 3. Dates
+            date_cols = detect_date_columns(processed_df)
+            for dc in date_cols:
+                processed_df = extract_date_features(processed_df, dc, ["year", "month", "weekday"])
+                try: processed_df = processed_df.drop(columns=[dc])
+                except: pass
+            
+            # 4. Encoding
+            cat_cols = detect_categorical_columns(processed_df)
+            if cat_cols:
+                processed_df = encode_data(processed_df, "Label Encoding", cat_cols)
+                
+            # 5. Scaling
+            num_cols = detect_numeric_columns(processed_df)
+            if num_cols:
+                processed_df = scale_data(processed_df, "StandardScaler", num_cols)
+                
+        st.success("✅ **Automated Preprocessing & Transform Complete!** Proceed below to train your model.")
+        
+        with st.expander("Preview Auto-Processed Dataset"):
+            st.dataframe(processed_df.head(20), use_container_width=True)
+            
+        st.download_button("Download Processed Data", data=dataframe_to_csv(processed_df), file_name="auto_processed.csv", mime="text/csv")
+        
     else:
-        st.write("Review missing values before applying cleaning steps.")
-        st.dataframe(original_missing_summary)
-
-    st.markdown("---")
-    st.markdown("<div id='data-cleaning'></div>", unsafe_allow_html=True)
-    render_section_header("Data Cleaning")
-    clean_cols = st.multiselect("Drop columns", options=df.columns.tolist(), help="Remove irrelevant columns from the dataset.")
-    remove_duplicates = st.checkbox("Remove duplicate rows", value=True)
-
-    if remove_duplicates:
-        with st.spinner("Removing duplicates..."):
-            df = remove_duplicate_rows(df)
-        pipeline_steps.append("Removed duplicate rows")
-
-    if clean_cols:
-        with st.spinner("Dropping selected columns..."):
-            df = df.drop(columns=clean_cols, errors="ignore")
-        pipeline_steps.append(f"Dropped columns: {', '.join(clean_cols)}")
-
-    st.write("**After cleaning shape:**", df.shape)
-
-    numeric_columns = detect_numeric_columns(df)
-    categorical_columns = detect_categorical_columns(df)
-
-    st.subheader("Handle Missing Values")
-    missing_summary = get_missing_summary(df)
-    st.write("### Missing values by column")
-    st.dataframe(missing_summary)
-
-    missing_numeric_cols = [col for col in numeric_columns if df[col].isna().sum() > 0]
-    missing_categorical_cols = [col for col in categorical_columns if df[col].isna().sum() > 0]
-
-    if missing_numeric_cols or missing_categorical_cols:
-        if missing_numeric_cols:
-            st.subheader("Numeric missing values")
-            selected_numeric_cols = st.multiselect(
-                "Select numeric columns to handle",
-                options=missing_numeric_cols,
-            )
-            numeric_strategy = st.radio(
-                "Numeric strategy",
-                options=["Fill with Mean", "Fill with Median", "Drop rows"],
-                key="numeric_strategy",
-            )
+        st.markdown("---")
+        st.markdown("<div id='missing-values-before-cleaning'></div>", unsafe_allow_html=True)
+        render_section_header("Missing Values Before Cleaning")
+        original_missing_summary = get_missing_summary(df)
+        if original_missing_summary["missing_count"].sum() == 0:
+            st.success("No missing values detected in the uploaded dataset.")
         else:
-            selected_numeric_cols = []
-            numeric_strategy = None
+            st.write("Review missing values before applying cleaning steps.")
+            st.dataframe(original_missing_summary)
 
-        if missing_categorical_cols:
-            st.subheader("Categorical missing values")
-            selected_categorical_cols = st.multiselect(
-                "Select categorical columns to handle",
-                options=missing_categorical_cols,
-            )
-            categorical_strategy = st.radio(
-                "Categorical strategy",
-                options=["Fill with Mode", "Drop rows"],
-                key="categorical_strategy",
-            )
-        else:
-            selected_categorical_cols = []
-            categorical_strategy = None
+        st.markdown("---")
+        st.markdown("<div id='data-cleaning'></div>", unsafe_allow_html=True)
+        render_section_header("Data Cleaning")
+        clean_cols = st.multiselect("Drop columns", options=df.columns.tolist(), help="Remove irrelevant columns from the dataset.")
+        remove_duplicates = st.checkbox("Remove duplicate rows", value=True)
 
-        if st.button("Apply Changes"):
-            changes_applied = False
-            if selected_numeric_cols and numeric_strategy:
-                if numeric_strategy == "Fill with Mean":
-                    for col in selected_numeric_cols:
-                        df[col] = df[col].fillna(df[col].mean())
-                    st.success(f"Filled missing values in numeric columns {', '.join(selected_numeric_cols)} with mean.")
-                elif numeric_strategy == "Fill with Median":
-                    for col in selected_numeric_cols:
-                        df[col] = df[col].fillna(df[col].median())
-                    st.success(f"Filled missing values in numeric columns {', '.join(selected_numeric_cols)} with median.")
-                else:
-                    df = df.dropna(subset=selected_numeric_cols).reset_index(drop=True)
-                    st.success(f"Dropped rows with missing values in numeric columns {', '.join(selected_numeric_cols)}.")
-                changes_applied = True
+        if remove_duplicates:
+            with st.spinner("Removing duplicates..."):
+                df = remove_duplicate_rows(df)
+            pipeline_steps.append("Removed duplicate rows")
 
-            if selected_categorical_cols and categorical_strategy:
-                if categorical_strategy == "Fill with Mode":
-                    filled_cols = []
-                    for col in selected_categorical_cols:
-                        mode_value = df[col].mode(dropna=True)
-                        if not mode_value.empty:
-                            df[col] = df[col].fillna(mode_value[0])
-                            filled_cols.append(col)
-                    if filled_cols:
-                        st.success(f"Filled missing values in categorical columns {', '.join(filled_cols)} with mode.")
-                        changes_applied = True
+        if clean_cols:
+            with st.spinner("Dropping selected columns..."):
+                df = df.drop(columns=clean_cols, errors="ignore")
+            pipeline_steps.append(f"Dropped columns: {', '.join(clean_cols)}")
+
+        st.write("**After cleaning shape:**", df.shape)
+
+        numeric_columns = detect_numeric_columns(df)
+        categorical_columns = detect_categorical_columns(df)
+
+        st.subheader("Handle Missing Values")
+        missing_summary = get_missing_summary(df)
+        st.write("### Missing values by column")
+        st.dataframe(missing_summary)
+
+        missing_numeric_cols = [col for col in numeric_columns if df[col].isna().sum() > 0]
+        missing_categorical_cols = [col for col in categorical_columns if df[col].isna().sum() > 0]
+
+        if missing_numeric_cols or missing_categorical_cols:
+            if missing_numeric_cols:
+                st.subheader("Numeric missing values")
+                selected_numeric_cols = st.multiselect(
+                    "Select numeric columns to handle",
+                    options=missing_numeric_cols,
+                )
+                numeric_strategy = st.radio(
+                    "Numeric strategy",
+                    options=["Fill with Mean", "Fill with Median", "Drop rows"],
+                    key="numeric_strategy",
+                )
+            else:
+                selected_numeric_cols = []
+                numeric_strategy = None
+
+            if missing_categorical_cols:
+                st.subheader("Categorical missing values")
+                selected_categorical_cols = st.multiselect(
+                    "Select categorical columns to handle",
+                    options=missing_categorical_cols,
+                )
+                categorical_strategy = st.radio(
+                    "Categorical strategy",
+                    options=["Fill with Mode", "Drop rows"],
+                    key="categorical_strategy",
+                )
+            else:
+                selected_categorical_cols = []
+                categorical_strategy = None
+
+            if st.button("Apply Changes"):
+                changes_applied = False
+                if selected_numeric_cols and numeric_strategy:
+                    if numeric_strategy == "Fill with Mean":
+                        for col in selected_numeric_cols:
+                            df[col] = df[col].fillna(df[col].mean())
+                        st.success(f"Filled missing values in numeric columns {', '.join(selected_numeric_cols)} with mean.")
+                    elif numeric_strategy == "Fill with Median":
+                        for col in selected_numeric_cols:
+                            df[col] = df[col].fillna(df[col].median())
+                        st.success(f"Filled missing values in numeric columns {', '.join(selected_numeric_cols)} with median.")
                     else:
-                        st.warning("No mode value available for the selected categorical columns.")
-                else:
-                    df = df.dropna(subset=selected_categorical_cols).reset_index(drop=True)
-                    st.success(f"Dropped rows with missing values in categorical columns {', '.join(selected_categorical_cols)}.")
+                        df = df.dropna(subset=selected_numeric_cols).reset_index(drop=True)
+                        st.success(f"Dropped rows with missing values in numeric columns {', '.join(selected_numeric_cols)}.")
                     changes_applied = True
 
-            if changes_applied:
-                st.session_state.df = df
-                st.write("**Updated dataset after missing value handling:**")
-                st.dataframe(df.head(10))
-    else:
-        st.info("No missing values found in numeric or categorical columns.")
+                if selected_categorical_cols and categorical_strategy:
+                    if categorical_strategy == "Fill with Mode":
+                        filled_cols = []
+                        for col in selected_categorical_cols:
+                            mode_value = df[col].mode(dropna=True)
+                            if not mode_value.empty:
+                                df[col] = df[col].fillna(mode_value[0])
+                                filled_cols.append(col)
+                        if filled_cols:
+                            st.success(f"Filled missing values in categorical columns {', '.join(filled_cols)} with mode.")
+                            changes_applied = True
+                        else:
+                            st.warning("No mode value available for the selected categorical columns.")
+                    else:
+                        df = df.dropna(subset=selected_categorical_cols).reset_index(drop=True)
+                        st.success(f"Dropped rows with missing values in categorical columns {', '.join(selected_categorical_cols)}.")
+                        changes_applied = True
 
-    st.markdown("---")
-    st.markdown("<div id='encoding'></div>", unsafe_allow_html=True)
-    render_section_header("Encoding")
-    encoding_method = st.selectbox(
-        "Encoding method for categorical columns",
-        options=["None", "Label Encoding", "One-Hot Encoding"],
-        index=0,
-    )
-
-    if encoding_method != "None":
-        selected_encoding_cols = st.multiselect(
-            "Select categorical columns to encode",
-            options=categorical_columns,
-            default=[],
-            help="Choose one or more categorical columns to encode.",
-        )
-        if st.button("Apply Encoding"):
-            if selected_encoding_cols:
-                with st.spinner("Applying encoding..."):
-                    df = encode_data(df, encoding_method, selected_encoding_cols)
-                st.session_state.df = df
-                pipeline_steps.append(f"Applied {encoding_method} to {', '.join(selected_encoding_cols)}")
-                st.success(f"Applied {encoding_method} to {', '.join(selected_encoding_cols)}.")
-                st.write("**Updated dataset after encoding:**")
-                st.dataframe(df.head(10))
-            else:
-                st.warning("Select categorical columns to encode before applying.")
-    else:
-        selected_encoding_cols = []
-
-    st.markdown("---")
-    st.markdown("<div id='feature-engineering'></div>", unsafe_allow_html=True)
-    render_section_header("Feature Engineering")
-    date_cols = detect_date_columns(df)
-    if date_cols:
-        st.write("Detected date columns:", date_cols)
-        selected_date = st.selectbox("Select a date column to extract features", options=date_cols)
-        date_features = st.multiselect(
-            "Select date features to extract",
-            options=["year", "month", "day", "weekday", "quarter", "hour"],
-            default=["year", "month", "day"],
-        )
-        if selected_date and date_features:
-            with st.spinner("Extracting date features..."):
-                df = extract_date_features(df, selected_date, date_features)
-            st.session_state.df = df
-            pipeline_steps.append(f"Extracted date features from {selected_date}")
-
-    st.subheader("Create new features")
-    with st.expander("Column combination feature"):
-        new_feature_name = st.text_input("New feature name", value="")
-        left_column = st.selectbox("Left column", options=df.columns.tolist(), key="left_col")
-        right_column = st.selectbox("Right column", options=df.columns.tolist(), key="right_col")
-        operation = st.selectbox("Operation", options=["+", "-", "*", "/"])
-        if st.button("Create combined feature") and new_feature_name:
-            if operation in ["-", "*", "/"] and not (
-                pd.api.types.is_numeric_dtype(df[left_column]) and pd.api.types.is_numeric_dtype(df[right_column])
-            ):
-                st.warning("For -, * and / operations, both selected columns must be numeric.")
-            else:
-                with st.spinner("Creating new feature..."):
-                    df = create_combined_feature(df, new_feature_name, left_column, right_column, operation)
-                st.session_state.df = df
-                pipeline_steps.append(f"Created feature {new_feature_name} = {left_column} {operation} {right_column}")
-                st.success(f"Feature '{new_feature_name}' created.")
-
-    st.markdown("---")
-    st.markdown("<div id='exploratory-data-analysis'></div>", unsafe_allow_html=True)
-    render_section_header("Exploratory Data Analysis")
-    if st.checkbox("Show summary statistics", value=True):
-        with st.spinner("Computing summary statistics..."):
-            st.dataframe(generate_summary_statistics(df))
-
-    if st.checkbox("Show top correlated feature pairs", value=True):
-        with st.spinner("Calculating top correlations..."):
-            show_top_correlations(df, top_n=5)
-
-    if st.checkbox("Show correlation heatmap", value=True):
-        with st.spinner("Rendering correlation heatmap..."):
-            plot_correlation_heatmap(df)
-
-    if numeric_columns:
-        dist_column = st.selectbox("Select numeric column for distribution plot", options=numeric_columns, index=0)
-        plot_type = st.selectbox("Distribution plot type", options=["Histogram", "KDE"])
-        if st.button("Show distribution plot"):
-            plot_distribution(df, dist_column, plot_type)
-    else:
-        st.info("No numeric columns available for distribution plots.")
-
-    if categorical_columns:
-        cat_col_for_count = st.selectbox("Select categorical column for count plot", options=categorical_columns)
-        if st.button("Show count plot"):
-            plot_countplot(df, cat_col_for_count)
-
-    st.markdown("---")
-    st.markdown("<div id='scaling-and-pca'></div>", unsafe_allow_html=True)
-    render_section_header("Scaling and PCA")
-
-    st.subheader("Scaling")
-    scaling_method = st.selectbox(
-        "Scaling method for numeric columns",
-        options=["None", "StandardScaler", "MinMaxScaler"],
-        index=0,
-    )
-
-    processed_df = df.copy()
-    numeric_columns = detect_numeric_columns(processed_df)
-
-    if st.button("Apply Scaling"):
-        if scaling_method != "None" and numeric_columns:
-            with st.spinner("Applying scaling..."):
-                processed_df = scale_data(processed_df, scaling_method, numeric_columns)
-            pipeline_steps.append(f"Applied {scaling_method}")
-            st.session_state.df = processed_df
-            st.success(f"Applied {scaling_method} to numeric columns.")
+                if changes_applied:
+                    st.session_state.df = df
+                    st.write("**Updated dataset after missing value handling:**")
+                    st.dataframe(df.head(10))
         else:
-            st.info("No numeric columns available to scale or scaling method is None.")
+            st.info("No missing values found in numeric or categorical columns.")
 
-    st.subheader("PCA")
-    st.caption("PCA is independent from scaling. You can run either step separately.")
-    selected_pca_cols = st.multiselect(
-        "Select numeric columns for PCA",
-        options=numeric_columns,
-        default=numeric_columns[: min(5, len(numeric_columns))],
-        help="PCA will be computed only on these selected numeric columns.",
-        key="pca_selected_columns",
-    )
-
-    pca_component_limit = min(len(selected_pca_cols), len(processed_df))
-    pca_component_options = [count for count in [2, 3] if count <= pca_component_limit]
-    if pca_component_options:
-        default_index = 0
-        n_components = st.selectbox(
-            "Number of PCA components",
-            options=pca_component_options,
-            index=default_index,
-            help="Select 2 for a 2D plot or 3 for a 3D plot.",
+        st.markdown("---")
+        st.markdown("<div id='encoding'></div>", unsafe_allow_html=True)
+        render_section_header("Encoding")
+        encoding_method = st.selectbox(
+            "Encoding method for categorical columns",
+            options=["None", "Label Encoding", "One-Hot Encoding"],
+            index=0,
         )
-    else:
-        n_components = 2
-        st.info("PCA needs at least 2 selected numeric columns and 2 rows.")
 
-    if st.button("Run PCA"):
-        if not selected_pca_cols:
-            st.warning("Select at least two numeric columns to run PCA.")
-        elif not pca_component_options:
-            st.warning("PCA needs at least 2 selected numeric columns and 2 rows.")
-        else:
-            with st.spinner("Running PCA..."):
-                pca_df, variance, pca_error = apply_pca(processed_df, n_components, selected_pca_cols)
-            if pca_error:
-                st.warning(pca_error)
-            else:
-                st.subheader("PCA Results")
-                st.write("Selected PCA columns:", selected_pca_cols)
-                st.write("Explained variance ratio:")
-                st.write(variance.round(4))
-                plot_pca_projection(pca_df, variance)
-                pipeline_steps.append(f"Applied PCA with {n_components} components")
-                processed_df = pd.concat([processed_df.reset_index(drop=True), pca_df.reset_index(drop=True)], axis=1)
-
-    st.write("Preview of the processed dataset after applied transformations.")
-    st.dataframe(processed_df.head(20))
-    st.write("**Processed shape:**", processed_df.shape)
-
-    csv_data = dataframe_to_csv(processed_df)
-    st.download_button(
-        label="Download processed dataset as CSV",
-        data=csv_data,
-        file_name="processed_dataset.csv",
-        mime="text/csv",
-    )
-
-    st.markdown("---")
-    st.markdown("<div id='outlier-detection'></div>", unsafe_allow_html=True)
-    render_section_header("Outlier Detection")
-    st.write("Identify potential outliers in numeric columns using the IQR rule (values outside 1.5 x IQR).")
-
-    outlier_summary, outlier_mask = summarize_outliers_iqr(processed_df)
-    if outlier_summary.empty:
-        st.success("No potential outliers were detected in numeric columns using the IQR rule.")
-    else:
-        total_outlier_rows = int(outlier_mask.sum())
-        st.metric("Rows With At Least One Outlier", total_outlier_rows)
-        st.dataframe(outlier_summary, use_container_width=True)
-
-        with st.expander("Preview rows with outliers"):
-            preview_limit = st.slider(
-                "Rows to preview",
-                min_value=5,
-                max_value=min(200, max(5, total_outlier_rows)),
-                value=min(20, max(5, total_outlier_rows)),
-                key="outlier_preview_limit",
+        if encoding_method != "None":
+            selected_encoding_cols = st.multiselect(
+                "Select categorical columns to encode",
+                options=categorical_columns,
+                default=[],
+                help="Choose one or more categorical columns to encode.",
             )
-            st.dataframe(processed_df[outlier_mask].head(preview_limit), use_container_width=True)
+            if st.button("Apply Encoding"):
+                if selected_encoding_cols:
+                    with st.spinner("Applying encoding..."):
+                        df = encode_data(df, encoding_method, selected_encoding_cols)
+                    st.session_state.df = df
+                    pipeline_steps.append(f"Applied {encoding_method} to {', '.join(selected_encoding_cols)}")
+                    st.success(f"Applied {encoding_method} to {', '.join(selected_encoding_cols)}.")
+                    st.write("**Updated dataset after encoding:**")
+                    st.dataframe(df.head(10))
+                else:
+                    st.warning("Select categorical columns to encode before applying.")
+        else:
+            selected_encoding_cols = []
+
+        st.markdown("---")
+        st.markdown("<div id='feature-engineering'></div>", unsafe_allow_html=True)
+        render_section_header("Feature Engineering")
+        date_cols = detect_date_columns(df)
+        if date_cols:
+            st.write("Detected date columns:", date_cols)
+            selected_date = st.selectbox("Select a date column to extract features", options=date_cols)
+            date_features = st.multiselect(
+                "Select date features to extract",
+                options=["year", "month", "day", "weekday", "quarter", "hour"],
+                default=["year", "month", "day"],
+            )
+            if selected_date and date_features:
+                with st.spinner("Extracting date features..."):
+                    df = extract_date_features(df, selected_date, date_features)
+                st.session_state.df = df
+                pipeline_steps.append(f"Extracted date features from {selected_date}")
+
+        st.subheader("Create new features")
+        with st.expander("Column combination feature"):
+            new_feature_name = st.text_input("New feature name", value="")
+            left_column = st.selectbox("Left column", options=df.columns.tolist(), key="left_col")
+            right_column = st.selectbox("Right column", options=df.columns.tolist(), key="right_col")
+            operation = st.selectbox("Operation", options=["+", "-", "*", "/"])
+            if st.button("Create combined feature") and new_feature_name:
+                if operation in ["-", "*", "/"] and not (
+                    pd.api.types.is_numeric_dtype(df[left_column]) and pd.api.types.is_numeric_dtype(df[right_column])
+                ):
+                    st.warning("For -, * and / operations, both selected columns must be numeric.")
+                else:
+                    with st.spinner("Creating new feature..."):
+                        df = create_combined_feature(df, new_feature_name, left_column, right_column, operation)
+                    st.session_state.df = df
+                    pipeline_steps.append(f"Created feature {new_feature_name} = {left_column} {operation} {right_column}")
+                    st.success(f"Feature '{new_feature_name}' created.")
+
+        st.markdown("---")
+        st.markdown("<div id='exploratory-data-analysis'></div>", unsafe_allow_html=True)
+        render_section_header("Exploratory Data Analysis")
+        if st.checkbox("Show summary statistics", value=True):
+            with st.spinner("Computing summary statistics..."):
+                st.dataframe(generate_summary_statistics(df))
+
+        if st.checkbox("Show top correlated feature pairs", value=True):
+            with st.spinner("Calculating top correlations..."):
+                show_top_correlations(df, top_n=5)
+
+        if st.checkbox("Show correlation heatmap", value=True):
+            with st.spinner("Rendering correlation heatmap..."):
+                plot_correlation_heatmap(df)
+
+        if numeric_columns:
+            dist_column = st.selectbox("Select numeric column for distribution plot", options=numeric_columns, index=0)
+            plot_type = st.selectbox("Distribution plot type", options=["Histogram", "KDE"])
+            if st.button("Show distribution plot"):
+                plot_distribution(df, dist_column, plot_type)
+        else:
+            st.info("No numeric columns available for distribution plots.")
+
+        if categorical_columns:
+            cat_col_for_count = st.selectbox("Select categorical column for count plot", options=categorical_columns)
+            if st.button("Show count plot"):
+                plot_countplot(df, cat_col_for_count)
+
+        st.markdown("---")
+        st.markdown("<div id='scaling-and-pca'></div>", unsafe_allow_html=True)
+        render_section_header("Scaling and PCA")
+
+        st.subheader("Scaling")
+        scaling_method = st.selectbox(
+            "Scaling method for numeric columns",
+            options=["None", "StandardScaler", "MinMaxScaler"],
+            index=0,
+        )
+
+        processed_df = df.copy()
+        numeric_columns = detect_numeric_columns(processed_df)
+
+        if st.button("Apply Scaling"):
+            if scaling_method != "None" and numeric_columns:
+                with st.spinner("Applying scaling..."):
+                    processed_df = scale_data(processed_df, scaling_method, numeric_columns)
+                pipeline_steps.append(f"Applied {scaling_method}")
+                st.session_state.df = processed_df
+                st.success(f"Applied {scaling_method} to numeric columns.")
+            else:
+                st.info("No numeric columns available to scale or scaling method is None.")
+
+        st.subheader("PCA")
+        st.caption("PCA is independent from scaling. You can run either step separately.")
+        selected_pca_cols = st.multiselect(
+            "Select numeric columns for PCA",
+            options=numeric_columns,
+            default=numeric_columns[: min(5, len(numeric_columns))],
+            help="PCA will be computed only on these selected numeric columns.",
+            key="pca_selected_columns",
+        )
+
+        pca_component_limit = min(len(selected_pca_cols), len(processed_df))
+        pca_component_options = [count for count in [2, 3] if count <= pca_component_limit]
+        if pca_component_options:
+            default_index = 0
+            n_components = st.selectbox(
+                "Number of PCA components",
+                options=pca_component_options,
+                index=default_index,
+                help="Select 2 for a 2D plot or 3 for a 3D plot.",
+            )
+        else:
+            n_components = 2
+            st.info("PCA needs at least 2 selected numeric columns and 2 rows.")
+
+        if st.button("Run PCA"):
+            if not selected_pca_cols:
+                st.warning("Select at least two numeric columns to run PCA.")
+            elif not pca_component_options:
+                st.warning("PCA needs at least 2 selected numeric columns and 2 rows.")
+            else:
+                with st.spinner("Running PCA..."):
+                    pca_df, variance, pca_error = apply_pca(processed_df, n_components, selected_pca_cols)
+                if pca_error:
+                    st.warning(pca_error)
+                else:
+                    st.subheader("PCA Results")
+                    st.write("Selected PCA columns:", selected_pca_cols)
+                    st.write("Explained variance ratio:")
+                    st.write(variance.round(4))
+                    plot_pca_projection(pca_df, variance)
+                    pipeline_steps.append(f"Applied PCA with {n_components} components")
+                    processed_df = pd.concat([processed_df.reset_index(drop=True), pca_df.reset_index(drop=True)], axis=1)
+
+        st.write("Preview of the processed dataset after applied transformations.")
+        st.dataframe(processed_df.head(20))
+        st.write("**Processed shape:**", processed_df.shape)
+
+        csv_data = dataframe_to_csv(processed_df)
+        st.download_button(
+            label="Download processed dataset as CSV",
+            data=csv_data,
+            file_name="processed_dataset.csv",
+            mime="text/csv",
+        )
+
+        st.markdown("---")
+        st.markdown("<div id='outlier-detection'></div>", unsafe_allow_html=True)
+        render_section_header("Outlier Detection")
+        st.write("Identify potential outliers in numeric columns using the IQR rule (values outside 1.5 x IQR).")
+
+        outlier_summary, outlier_mask = summarize_outliers_iqr(processed_df)
+        if outlier_summary.empty:
+            st.success("No potential outliers were detected in numeric columns using the IQR rule.")
+        else:
+            total_outlier_rows = int(outlier_mask.sum())
+            st.metric("Rows With At Least One Outlier", total_outlier_rows)
+            st.dataframe(outlier_summary, use_container_width=True)
+
+            with st.expander("Preview rows with outliers"):
+                preview_limit = st.slider(
+                    "Rows to preview",
+                    min_value=5,
+                    max_value=min(200, max(5, total_outlier_rows)),
+                    value=min(20, max(5, total_outlier_rows)),
+                    key="outlier_preview_limit",
+                )
+                st.dataframe(processed_df[outlier_mask].head(preview_limit), use_container_width=True)
 
     st.markdown("---")
     st.markdown("<div id='model-training'></div>", unsafe_allow_html=True)
