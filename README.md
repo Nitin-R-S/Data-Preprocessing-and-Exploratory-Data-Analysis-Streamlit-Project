@@ -1,17 +1,21 @@
-# Data Preprocessing and Exploratory Data Analysis Streamlit Project
+# Automated EDA, Preprocessing & Model Training (Streamlit)
 
 An interactive Streamlit application for end-to-end dataset exploration, preprocessing, and machine learning workflows.
 
-The app lets you upload a CSV dataset, profile data quality, clean and transform features, run exploratory analysis, train configurable ML models, and export a processed CSV.
+The app lets you upload a CSV dataset, profile data quality, choose between automatic or manual preprocessing, run exploratory analysis, train configurable ML models, and export a processed CSV.
 
 ## Features
 
 - Robust CSV loading with fallback parsing attempts (encoding/engine retries)
 - Dataset overview with preview, shape, columns, and dtypes
+- Modernized UI with improved section layout, visual hierarchy, and updated app branding
 - Automated dataset intelligence:
 	- detailed column profile (dtype, missing %, unique count, sample value, suggested role)
 	- suggested preprocessing plan
 	- target candidates and model recommendations
+- Two preprocessing modes:
+	- **Automatic (One-Click):** duplicate removal, missing-value handling, date feature extraction, categorical encoding, numeric scaling, and downloadable processed output
+	- **Manual (Step-by-Step):** full control of each preprocessing stage
 - Data cleaning:
 	- normalized column names
 	- optional duplicate removal
@@ -42,6 +46,10 @@ The app lets you upload a CSV dataset, profile data quality, clean and transform
 - Outlier detection:
 	- IQR-based outlier summary
 	- preview rows containing outliers
+- Pre-training model intelligence:
+	- analyzes processed dataset before training
+	- recommends suitable model family and rationale
+	- surfaces preprocessing suggestions before model configuration
 - Modeling with configurable hyperparameters:
 	- Classification: Logistic Regression, KNN, SVM, Decision Tree, Random Forest Classifier
 	- Regression: Linear Regression, KNN, SVR, Decision Tree, Random Forest Regressor
@@ -50,6 +58,7 @@ The app lets you upload a CSV dataset, profile data quality, clean and transform
 	- classification: confusion matrix, feature influence, tree diagram or decision boundary
 	- regression: residual plots, feature influence, tree diagram or regression value map
 	- clustering: cluster scatter, cluster sizes, centroid heatmap
+- Improved plot stability and compatibility fixes for count plots, decision boundaries, and colorbar rendering
 - Pipeline summary of applied preprocessing steps
 - Download processed dataset as CSV
 
@@ -119,19 +128,18 @@ Then open the local URL shown in the terminal (usually http://localhost:8501).
 ## How to Use
 
 1. Upload a CSV file from the sidebar.
-2. Review Dataset Overview and Automated Dataset Intelligence outputs.
-3. Apply cleaning actions (drop columns, remove duplicates).
-4. Handle missing values for selected numeric/categorical columns.
-5. Apply categorical encoding if needed.
-6. Create engineered features (date extraction and combined features).
-7. Run EDA visuals (summary statistics, correlations, distributions, count plots).
-8. Apply scaling and then run PCA with 2 or 3 components for 2D/3D visualization.
-9. Review outlier detection results.
-10. Train a model (classification, regression, or clustering) with hyperparameters.
-11. Download the processed dataset as CSV.
+2. Review **Dataset Overview** and **Automated Dataset Intelligence** outputs.
+3. Choose a preprocessing path:
+	- **Automatic (One-Click)** for quick end-to-end preprocessing
+	- **Manual (Step-by-Step)** for granular control
+4. In manual mode, optionally apply cleaning, missing-value handling, encoding, feature engineering, EDA, scaling/PCA, and outlier review.
+5. Open **Model Selection & Training Analysis** to view dataset-driven model suggestions.
+6. Train a model (classification, regression, or clustering) with selected hyperparameters.
+7. Download the processed dataset as CSV.
 
 ## Notes
 
 - Date columns are auto-detected from existing datetime columns and likely datetime-like text columns.
 - PCA can run independently of scaling, but scaling is usually recommended for better component behavior.
+- Automatic mode applies sensible defaults designed for quick baseline model training.
 - Large datasets may make visualizations and model training slower to render.
